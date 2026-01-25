@@ -1,0 +1,111 @@
+.heroWrap {
+  padding: 30px 0 60px;
+}
+
+.heroCard {
+  background: linear-gradient(
+    180deg,
+    rgba(129, 92, 249, 0.08),
+    rgba(12, 12, 17, 0.9)
+  );
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 32px;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 28px;
+  box-shadow: var(--shadow);
+}
+
+.kicker {
+  color: var(--primary-soft);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  margin: 0 0 6px;
+}
+
+.title {
+  font-size: 36px;
+  line-height: 1.2;
+  margin: 0 0 10px;
+}
+
+.subtitle {
+  color: var(--muted);
+  margin: 0 0 18px;
+}
+
+.ctas {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.featureRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.featureBox {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+}
+
+.featureIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.featureTitle {
+  font-weight: 700;
+}
+
+.ctaPanel {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.lockedPanel {
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.crown {
+  font-size: 24px;
+}
+
+.panelTitle {
+  margin: 0;
+}
+
+.security {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  padding: 14px;
+  border-radius: 14px;
+}
+
+@media (max-width: 900px) {
+  .heroCard {
+    grid-template-columns: 1fr;
+  }
+}

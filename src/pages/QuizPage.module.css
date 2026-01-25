@@ -1,0 +1,35 @@
+.list {
+  display: grid;
+  gap: 12px;
+}
+
+.qHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.question {
+  margin: 10px 0;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.option {
+  padding: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.option[data-selected="true"] {
+  border-color: rgba(129, 92, 249, 0.6);
+  background: rgba(129, 92, 249, 0.08);
+}

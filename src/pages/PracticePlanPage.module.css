@@ -1,0 +1,73 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.title {
+  margin: 8px 0 4px;
+  font-size: 24px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.section {
+  margin-top: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.steps {
+  display: grid;
+  gap: 12px;
+}
+
+.stepHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stepTitle {
+  margin: 6px 0;
+}
+
+.status {
+  color: var(--primary-soft);
+  font-weight: 700;
+}
+
+.stepFooter {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+}
+
+.weekHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.outline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.outlineRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.day {
+  font-weight: 700;
+  font-size: 16px;
+}
