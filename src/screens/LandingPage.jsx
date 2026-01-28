@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import styles from "./LandingPage.module.css";
+import styles from "../styles/screens/LandingPage.module.css";
 
 const features = [
   { title: "AI-Powered", text: "Smart guidance for every practice session." },

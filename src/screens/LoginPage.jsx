@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import styles from "./AuthPage.module.css";
+import { useDispatch } from "react-redux";
+import { loginSuccess, setError as setAuthError } from "../redux/slices/authSlice";
+import styles from "../styles/screens/AuthPage.module.css";
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const dispatch = useDispatch();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
 
@@ -13,10 +14,14 @@ function LoginPage() {
     e.preventDefault();
     setError("");
     try {
-      await login(form);
+      // Simulate login - replace with actual API call
+      const mockUser = { name: "Musician", email: form.email };
+      const mockToken = "mock-jwt-token-" + Date.now();
+      dispatch(loginSuccess({ token: mockToken, user: mockUser, subscription: "free" }));
       navigate("/dashboard");
     } catch (err) {
       setError("Unable to login.");
+      dispatch(setAuthError("Unable to login."));
     }
   };
 

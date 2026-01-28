@@ -1,17 +1,26 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import styles from "./AuthPage.module.css";
+import { useDispatch } from "react-redux";
+import { registerSuccess, setError as setAuthError } from "../redux/slices/authSlice";
+import styles from "../styles/screens/AuthPage.module.css";
 
 function RegisterPage() {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const dispatch = useDispatch();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await register(form);
-    navigate("/dashboard");
+    try {
+      // Simulate registration - replace with actual API call
+      const mockToken = "mock-jwt-token-" + Date.now();
+      dispatch(registerSuccess({ token: mockToken, user: form, subscription: "free" }));
+      navigate("/dashboard");
+    } catch (err) {
+      setError("Unable to register.");
+      dispatch(setAuthError("Unable to register."));
+    }
   };
 
   return (

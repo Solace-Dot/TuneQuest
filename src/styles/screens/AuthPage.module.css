@@ -16,6 +16,10 @@
   gap: 16px;
 }
 
+[data-theme="light"] .card {
+  background: var(--panel);
+}
+
 .title {
   text-align: center;
   margin: 0;

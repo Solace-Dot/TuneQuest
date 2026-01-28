@@ -1,31 +1,36 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import { ProfileProvider } from "./context/ProfileContext";
+import { Provider, useDispatch } from "react-redux";
+import store from "./redux/store";
+import { initializeTheme } from "./redux/slices/themeSlice";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PremiumRoute from "./components/PremiumRoute";
-import LandingPage from "./pages/LandingPage";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import InstrumentPage from "./pages/InstrumentPage";
-import SkillLevelPage from "./pages/SkillLevelPage";
-import GoalPage from "./pages/GoalPage";
-import DashboardPage from "./pages/DashboardPage";
-import PracticePlanPage from "./pages/PracticePlanPage";
-import ExercisesPage from "./pages/ExercisesPage";
-import QuizPage from "./pages/QuizPage";
-import ProgressPage from "./pages/ProgressPage";
-import SubscriptionPage from "./pages/SubscriptionPage";
+import LandingPage from "./screens/LandingPage";
+import LoginPage from "./screens/LoginPage";
+import RegisterPage from "./screens/RegisterPage";
+import ForgotPasswordPage from "./screens/ForgotPasswordPage";
+import InstrumentPage from "./screens/InstrumentPage";
+import SkillLevelPage from "./screens/SkillLevelPage";
+import GoalPage from "./screens/GoalPage";
+import DashboardPage from "./screens/DashboardPage";
+import PracticePlanPage from "./screens/PracticePlanPage";
+import ExercisesPage from "./screens/ExercisesPage";
+import QuizPage from "./screens/QuizPage";
+import ProgressPage from "./screens/ProgressPage";
+import SubscriptionPage from "./screens/SubscriptionPage";
 
-function App() {
+function AppContent() {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(initializeTheme());
+  }, [dispatch]);
+
   return (
-    <AuthProvider>
-      <ProfileProvider>
-        <BrowserRouter>
-          <Layout>
-            <Routes>
+    <BrowserRouter>
+      <Layout>
+        <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
@@ -99,8 +104,14 @@ function App() {
             </Routes>
           </Layout>
         </BrowserRouter>
-      </ProfileProvider>
-    </AuthProvider>
+  );
+}
+
+function App() {
+  return (
+    <Provider store={store}>
+      <AppContent />
+    </Provider>
   );
 }
 

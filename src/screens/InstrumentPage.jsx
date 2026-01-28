@@ -1,7 +1,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useProfile } from "../context/ProfileContext";
-import styles from "./Onboarding.module.css";
+import { useDispatch, useSelector } from "react-redux";
+import { setInstrument } from "../redux/slices/profileSlice";
+import styles from "../styles/screens/Onboarding.module.css";
 
 const instruments = [
   { key: "Guitar", icon: "🎸", desc: "Acoustic or electric. Shred or strum." },
@@ -12,13 +13,17 @@ const instruments = [
 
 function InstrumentPage() {
   const navigate = useNavigate();
-  const { profile, updateProfile, saveProfile, isSaving } = useProfile();
+  const dispatch = useDispatch();
+  const { instrument } = useSelector((state) => state.profile);
 
-  const handleSelect = (instrument) => updateProfile({ instrument });
+  const handleSelect = (selected) => {
+    dispatch(setInstrument(selected));
+  };
 
-  const handleNext = async () => {
-    await saveProfile({ instrument: profile.instrument });
-    navigate("/onboarding/skill");
+  const handleNext = () => {
+    if (instrument) {
+      navigate("/onboarding/skill");
+    }
   };
 
   return (
@@ -39,7 +44,7 @@ function InstrumentPage() {
             {instruments.map((item) => (
               <div
                 key={item.key}
-                className={`${styles.card} ${profile.instrument === item.key ? styles.selected : ""}`}
+                className={`${styles.card} ${instrument === item.key ? styles.selected : ""}`}
                 onClick={() => handleSelect(item.key)}
               >
                 <div className={styles.icon}>{item.icon}</div>
@@ -55,9 +60,9 @@ function InstrumentPage() {
             <button
               className="btn btn-primary"
               onClick={handleNext}
-              disabled={isSaving}
+              disabled={!instrument}
             >
-              {isSaving ? "Saving..." : "Next"}
+              Next
             </button>
           </div>
         </div>

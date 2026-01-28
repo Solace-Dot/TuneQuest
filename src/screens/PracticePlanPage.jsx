@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchPracticePlan } from "../api/client";
 import ProgressBar from "../components/ProgressBar";
-import styles from "./PracticePlanPage.module.css";
+import styles from "../styles/screens/PracticePlanPage.module.css";
 
 function PracticePlanPage() {
   const [plan, setPlan] = useState(null);

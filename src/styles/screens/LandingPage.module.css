@@ -17,6 +17,10 @@
   box-shadow: var(--shadow);
 }
 
+[data-theme="light"] .heroCard {
+  background: var(--panel);
+}
+
 .kicker {
   color: var(--primary-soft);
   font-weight: 700;

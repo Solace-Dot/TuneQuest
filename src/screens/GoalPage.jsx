@@ -1,7 +1,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useProfile } from "../context/ProfileContext";
-import styles from "./Onboarding.module.css";
+import { useDispatch, useSelector } from "react-redux";
+import { setGoal } from "../redux/slices/profileSlice";
+import styles from "../styles/screens/Onboarding.module.css";
 
 const goals = [
   {
@@ -23,12 +24,14 @@ const goals = [
 
 function GoalPage() {
   const navigate = useNavigate();
-  const { profile, updateProfile, saveProfile, isSaving } = useProfile();
+  const dispatch = useDispatch();
+  const { goal } = useSelector((state) => state.profile);
 
-  const handleSelect = (goal) => updateProfile({ goal });
+  const handleSelect = (selectedGoal) => {
+    dispatch(setGoal(selectedGoal));
+  };
 
-  const handleNext = async () => {
-    await saveProfile({ goal: profile.goal });
+  const handleNext = () => {
     navigate("/dashboard");
   };
 
@@ -48,7 +51,7 @@ function GoalPage() {
             {goals.map((item) => (
               <div
                 key={item.key}
-                className={`${styles.card} ${profile.goal === item.key ? styles.selected : ""}`}
+                className={`${styles.card} ${goal === item.key ? styles.selected : ""}`}
                 onClick={() => handleSelect(item.key)}
               >
                 <div className={styles.icon}>{item.icon}</div>
@@ -67,9 +70,8 @@ function GoalPage() {
             <button
               className="btn btn-primary"
               onClick={handleNext}
-              disabled={isSaving}
             >
-              {isSaving ? "Saving..." : "Save Profile"}
+              Continue
             </button>
           </div>
         </div>

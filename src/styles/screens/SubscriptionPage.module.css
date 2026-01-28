@@ -5,6 +5,7 @@
 .title {
   margin: 0 0 6px;
   font-size: 26px;
+  color: var(--text);
 }
 
 .current {
@@ -14,6 +15,10 @@
   padding: 8px 12px;
   border-radius: 12px;
   border: 1px solid var(--border);
+}
+
+.textcolor {
+  color: var(--text);
 }
 
 .plans {
@@ -44,6 +49,7 @@
 
 .planTitle {
   font-weight: 800;
+  color: var(--text);
 }
 
 .planSubtitle {
@@ -60,6 +66,7 @@
 .price {
   font-size: 32px;
   font-weight: 900;
+  color: var(--text);
 }
 
 .featureList {

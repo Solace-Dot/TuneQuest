@@ -2,6 +2,7 @@
   font-size: 26px;
   font-weight: 800;
   margin-bottom: 4px;
+  color: var(--text);
 }
 
 .subtitle {
@@ -13,6 +14,10 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
+}
+
+.textcolor {
+  color: var(--text);
 }
 
 .cardHeader {
@@ -31,6 +36,7 @@
 .cardTitle {
   font-weight: 800;
   font-size: 18px;
+  color: var(--text);
 }
 
 .metaRow {
@@ -46,6 +52,7 @@
 
 .metaValue {
   font-weight: 700;
+  color: var(--text);
 }
 
 .statRow {
@@ -71,6 +78,7 @@
 .statNumber {
   font-size: 22px;
   font-weight: 800;
+  color: var(--text);
 }
 
 .progressGrid {
@@ -84,6 +92,7 @@
 .largeNumber {
   font-size: 32px;
   font-weight: 900;
+  color: var(--text);
 }
 
 .actionsCard {

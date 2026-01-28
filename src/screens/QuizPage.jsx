@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import styles from "./QuizPage.module.css";
+import styles from "../styles/screens/QuizPage.module.css";
 
 const quizQuestions = [
   {

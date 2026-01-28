@@ -1,19 +1,26 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import classNames from "classnames";
-import { useAuth } from "../context/AuthContext";
-import styles from "./TopNav.module.css";
+import { useDispatch, useSelector } from "react-redux";
+import { logout } from "../redux/slices/authSlice";
+import ThemeToggle from "./ThemeToggle";
+import styles from "../styles/components/TopNav.module.css";
 
 function TopNav() {
   const location = useLocation();
-  const { token, user, logout, subscription } = useAuth();
+  const dispatch = useDispatch();
+  const { token, user, subscription } = useSelector((state) => state.auth);
+
+  const handleLogout = () => {
+    dispatch(logout());
+  };
 
   const navItems = [
     { to: "/dashboard", label: "Dashboard", auth: true },
     { to: "/plan", label: "Practice Plan", auth: true },
     { to: "/exercises", label: "Exercises", auth: true },
     { to: "/progress", label: "Progress", auth: true },
-    { to: "/subscribe", label: "Pricing", auth: false },
+    { to: "/subscribe", label: "Subscription", auth: false },
   ];
 
   return (
@@ -40,6 +47,7 @@ function TopNav() {
         </div>
       </div>
       <div className={styles.actions}>
+        <ThemeToggle />
         {token ? (
           <div className={styles.userArea}>
             <span
@@ -53,7 +61,7 @@ function TopNav() {
               {subscription === "premium" ? "Premium" : "Free"}
             </span>
             <span className={styles.userName}>{user?.name || "Musician"}</span>
-            <button className="btn btn-ghost" onClick={logout}>
+            <button className="btn btn-ghost" onClick={handleLogout}>
               Logout
             </button>
           </div>

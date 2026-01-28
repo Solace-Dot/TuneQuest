@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useRecorder } from "../hooks/useRecorder";
-import styles from "./ExercisesPage.module.css";
+import styles from "../styles/screens/ExercisesPage.module.css";
 
 const exercises = [
   {

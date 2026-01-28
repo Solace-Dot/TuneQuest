@@ -1,26 +1,24 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useProfile } from "../context/ProfileContext";
-import styles from "./Onboarding.module.css";
+import { useDispatch, useSelector } from "react-redux";
+import { setSkillLevel } from "../redux/slices/profileSlice";
+import styles from "../styles/screens/Onboarding.module.css";
 
 const levels = [
   { key: "Beginner", icon: "⭐", desc: "Ready to learn basics and chords." },
   { key: "Intermediate", icon: "🎯", desc: "Play simple songs; build theory." },
-  {
-    key: "Advanced",
-    icon: "🚀",
-    desc: "Specialized techniques and performance.",
-  },
 ];
 
 function SkillLevelPage() {
   const navigate = useNavigate();
-  const { profile, updateProfile, saveProfile, isSaving } = useProfile();
+  const dispatch = useDispatch();
+  const { skillLevel } = useSelector((state) => state.profile);
 
-  const handleSelect = (level) => updateProfile({ level });
+  const handleSelect = (level) => {
+    dispatch(setSkillLevel(level));
+  };
 
-  const handleNext = async () => {
-    await saveProfile({ level: profile.level });
+  const handleNext = () => {
     navigate("/onboarding/goals");
   };
 
@@ -40,7 +38,7 @@ function SkillLevelPage() {
             {levels.map((item) => (
               <div
                 key={item.key}
-                className={`${styles.card} ${profile.level === item.key ? styles.selected : ""}`}
+                className={`${styles.card} ${skillLevel === item.key ? styles.selected : ""}`}
                 onClick={() => handleSelect(item.key)}
               >
                 <div className={styles.icon}>{item.icon}</div>
@@ -59,9 +57,8 @@ function SkillLevelPage() {
             <button
               className="btn btn-primary"
               onClick={handleNext}
-              disabled={isSaving}
             >
-              {isSaving ? "Saving..." : "Next"}
+              Next
             </button>
           </div>
         </div>
