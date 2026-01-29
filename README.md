@@ -58,6 +58,7 @@ It provides APIs for the frontend (`TuneQuest_Frontend`) to interact with the da
 ---
 
 ## 📂 Project Structure
+```bash
 TuneQuest_Backend/
 ├── config/            # Django project configuration (settings, urls, wsgi, asgi)
 │   ├── settings.py
@@ -66,7 +67,7 @@ TuneQuest_Backend/
 │   └── asgi.py
 ├── manage.py           # Django management script
 └── (apps will be added here, e.g. api, users, quests)
-
+```
 ---
 
 ## 🛠️ Setup Instructions
