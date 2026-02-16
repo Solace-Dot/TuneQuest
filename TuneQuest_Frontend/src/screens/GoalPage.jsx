@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { Container, Row, Col } from "react-bootstrap";
 import { setGoal } from "../redux/slices/profileSlice";
 import styles from "../styles/screens/Onboarding.module.css";
 
@@ -37,45 +38,52 @@ function GoalPage() {
 
   return (
     <div className="page-shell">
-      <div className={styles.page}>
-        <div className={styles.header}>
-          <div>
-            <h2 className="section-title">What's Your Learning Goal?</h2>
-            <p className="subtext">
-              Choose where you want to focus during practice.
-            </p>
-          </div>
-        </div>
-        <div className="card">
-          <div className={styles.cards}>
-            {goals.map((item) => (
-              <div
-                key={item.key}
-                className={`${styles.card} ${goal === item.key ? styles.selected : ""}`}
-                onClick={() => handleSelect(item.key)}
-              >
-                <div className={styles.icon}>{item.icon}</div>
-                <div className={styles.title}>{item.key}</div>
-                <p className="small">{item.desc}</p>
+      <Container>
+        <Row className="justify-content-center">
+          <Col lg={8} md={10}>
+            <div className={styles.page}>
+              <div className={styles.header}>
+                <div>
+                  <h2 className="section-title">What's Your Learning Goal?</h2>
+                  <p className="subtext">
+                    Choose where you want to focus during practice.
+                  </p>
+                </div>
               </div>
-            ))}
-          </div>
-          <div className={styles.footer}>
-            <button
-              className="btn btn-outline"
-              onClick={() => navigate("/onboarding/skill")}
-            >
-              Back
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={handleNext}
-            >
-              Continue
-            </button>
-          </div>
-        </div>
-      </div>
+              <div className="card">
+                <Row className="g-3">
+                  {goals.map((item) => (
+                    <Col key={item.key} md={6} xs={12}>
+                      <div
+                        className={`${styles.card} ${goal === item.key ? styles.selected : ""}`}
+                        onClick={() => handleSelect(item.key)}
+                      >
+                        <div className={styles.icon}>{item.icon}</div>
+                        <div className={styles.title}>{item.key}</div>
+                        <p className="small">{item.desc}</p>
+                      </div>
+                    </Col>
+                  ))}
+                </Row>
+                <div className={styles.footer}>
+                  <button
+                    className="btn btn-outline"
+                    onClick={() => navigate("/onboarding/skill")}
+                  >
+                    Back
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleNext}
+                  >
+                    Continue
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Col>
+        </Row>
+      </Container>
     </div>
   );
 }

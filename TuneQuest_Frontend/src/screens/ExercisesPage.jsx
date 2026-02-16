@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Container, Row, Col } from "react-bootstrap";
 import { useRecorder } from "../hooks/useRecorder";
 import styles from "../styles/screens/ExercisesPage.module.css";
 
@@ -28,72 +29,78 @@ function ExercisesPage() {
 
   return (
     <div className="page-shell">
-      <div className={styles.header}>
-        <h2 className="section-title">Interactive Listening</h2>
-        <p className="subtext">
-          Start recording, complete the prompt, and get instant feedback.
-        </p>
-      </div>
-
-      <div className="grid" style={{ gridTemplateColumns: "1.4fr 1fr" }}>
-        <div className="card">
-          <div className={styles.recHeader}>
-            <div>
-              <div className="pill">Manual Recording</div>
-              <h3>Capture your performance</h3>
-            </div>
-            <div className={styles.indicator} data-active={isRecording}>
-              <span className={styles.dot} />
-              {isRecording ? "Recording" : "Idle"}
-            </div>
-          </div>
-          <p className="small">
-            Press start, play the exercise, then stop to send for AI analysis.
+      <Container>
+        <div className={styles.header}>
+          <h2 className="section-title">Interactive Listening</h2>
+          <p className="subtext">
+            Start recording, complete the prompt, and get instant feedback.
           </p>
-          <div className={styles.controls}>
-            <button
-              className="btn btn-outline"
-              onClick={isRecording ? stop : start}
-            >
-              {isRecording ? "Stop" : "Start Recording"}
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={handleSend}
-              disabled={!audioUrl}
-            >
-              Send to AI
-            </button>
-          </div>
-          {permissionError && (
-            <div className="alert alert-error">{permissionError}</div>
-          )}
-          {audioUrl && (
-            <div className={styles.playback}>
-              <audio controls src={audioUrl} />
-            </div>
-          )}
-          {feedback && <div className="alert alert-success">{feedback}</div>}
         </div>
 
-        <div className="card">
-          <h3>Exercise Library</h3>
-          <div className={styles.list}>
-            {exercises.map((item) => (
-              <div
-                key={item.id}
-                className={`${styles.exercise} ${item.premium ? styles.locked : ""}`}
-              >
+        <Row className="g-4">
+          <Col lg={8} md={12}>
+            <div className="card">
+              <div className={styles.recHeader}>
                 <div>
-                  <div className={styles.exerciseTitle}>{item.title}</div>
-                  <p className="small">{item.detail}</p>
+                  <div className="pill">Manual Recording</div>
+                  <h3>Capture your performance</h3>
                 </div>
-                {item.premium && <span className="pill">Premium</span>}
+                <div className={styles.indicator} data-active={isRecording}>
+                  <span className={styles.dot} />
+                  {isRecording ? "Recording" : "Idle"}
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+              <p className="small">
+                Press start, play the exercise, then stop to send for AI analysis.
+              </p>
+              <div className={styles.controls}>
+                <button
+                  className="btn btn-outline"
+                  onClick={isRecording ? stop : start}
+                >
+                  {isRecording ? "Stop" : "Start Recording"}
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleSend}
+                  disabled={!audioUrl}
+                >
+                  Send to AI
+                </button>
+              </div>
+              {permissionError && (
+                <div className="alert alert-error">{permissionError}</div>
+              )}
+              {audioUrl && (
+                <div className={styles.playback}>
+                  <audio controls src={audioUrl} />
+                </div>
+              )}
+              {feedback && <div className="alert alert-success">{feedback}</div>}
+            </div>
+          </Col>
+
+          <Col lg={4} md={12}>
+            <div className="card">
+              <h3>Exercise Library</h3>
+              <div className={styles.list}>
+                {exercises.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`${styles.exercise} ${item.premium ? styles.locked : ""}`}
+                  >
+                    <div>
+                      <div className={styles.exerciseTitle}>{item.title}</div>
+                      <p className="small">{item.detail}</p>
+                    </div>
+                    {item.premium && <span className="pill">Premium</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Col>
+        </Row>
+      </Container>
     </div>
   );
 }

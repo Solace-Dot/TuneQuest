@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'goals',
     'quizzes',
     'progress',
+    'payments',
 ]
 
 MIDDLEWARE = [

@@ -1,6 +1,7 @@
 import React from "react";
 import classNames from "classnames";
 import { useDispatch, useSelector } from "react-redux";
+import { Container, Row, Col } from "react-bootstrap";
 import { setSubscription } from "../redux/slices/authSlice";
 import styles from "../styles/screens/SubscriptionPage.module.css";
 
@@ -45,7 +46,7 @@ function SubscriptionPage() {
 
   return (
     <div className="page-shell">
-      <div className="container-fluid">
+      <Container fluid>
         <div className={styles.hero}>
           <h2 className={styles.title}>Choose Your Plan</h2>
           <p className="subtext">
@@ -57,9 +58,9 @@ function SubscriptionPage() {
           </div>
         </div>
 
-        <div className="row g-4 justify-content-center">
+        <Row className="g-4 justify-content-center">
           {plans.map((plan) => (
-            <div key={plan.key} className="col-lg-5 col-md-12">
+            <Col key={plan.key} lg={5} md={12}>
               <div
                 className={classNames("card", {
                   [styles.highlight]: plan.key === "premium",
@@ -107,71 +108,71 @@ function SubscriptionPage() {
                   </button>
                 )}
               </div>
-            </div>
+            </Col>
           ))}
-        </div>
+        </Row>
 
-        <div className="row mt-5 g-4">
-        <div className="col-12">
-          <div className="card">
-            <h3>Detailed Feature Comparison</h3>
-            <div className={styles.table}>
-              <div className={styles.tableRow}>
-                <div>Feature</div>
-                <div>Free</div>
-                <div>Premium</div>
-              </div>
-              {[
-                "AI-Generated Practice Plans",
-                "Real-time Interactive Feedback",
-                "Unlimited Practice Sessions",
-                "Regenerate AI Plan (Unlimited Refreshes)",
-                "Detailed AI Progress Summaries",
-                "Ad-free Experience",
-              ].map((feat) => (
-                <div key={feat} className={styles.tableRow}>
-                  <div>{feat}</div>
-                  <div>✔</div>
-                  <div>✔</div>
+        <Row className="mt-5 g-4">
+          <Col xs={12}>
+            <div className="card">
+              <h3>Detailed Feature Comparison</h3>
+              <div className={styles.table}>
+                <div className={styles.tableRow}>
+                  <div>Feature</div>
+                  <div>Free</div>
+                  <div>Premium</div>
                 </div>
-              ))}
+                {[
+                  "AI-Generated Practice Plans",
+                  "Real-time Interactive Feedback",
+                  "Unlimited Practice Sessions",
+                  "Regenerate AI Plan (Unlimited Refreshes)",
+                  "Detailed AI Progress Summaries",
+                  "Ad-free Experience",
+                ].map((feat) => (
+                  <div key={feat} className={styles.tableRow}>
+                    <div>{feat}</div>
+                    <div>✔</div>
+                    <div>✔</div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
+          </Col>
+        </Row>
 
-      <div className="row mt-4 g-4">
-        <div className="col-12">
-          <div className="card">
-            <h3>Frequently Asked Questions</h3>
-            <div className={styles.faqItem}>
-              <div className={styles.faqQuestion}>
-                Can I cancel my subscription anytime?
+        <Row className="mt-4 g-4">
+          <Col xs={12}>
+            <div className="card">
+              <h3>Frequently Asked Questions</h3>
+              <div className={styles.faqItem}>
+                <div className={styles.faqQuestion}>
+                  Can I cancel my subscription anytime?
+                </div>
+                <div className="small">
+                  Yes, you can cancel anytime and keep access until the end of your
+                  billing period.
+                </div>
               </div>
-              <div className="small">
-                Yes, you can cancel anytime and keep access until the end of your
-                billing period.
+              <div className={styles.faqItem}>
+                <div className={styles.faqQuestion}>
+                  What payment methods do you accept?
+                </div>
+                <div className="small">
+                  We accept PayPal for all subscriptions. Your payment information is
+                  secure and encrypted.
+                </div>
+              </div>
+              <div className={styles.faqItem}>
+                <div className={styles.faqQuestion}>Is there a free trial?</div>
+                <div className="small">
+                  Yes, start with our Free plan to explore all basic features.
+                </div>
               </div>
             </div>
-            <div className={styles.faqItem}>
-              <div className={styles.faqQuestion}>
-                What payment methods do you accept?
-              </div>
-              <div className="small">
-                We accept PayPal for all subscriptions. Your payment information is
-                secure and encrypted.
-              </div>
-            </div>
-            <div className={styles.faqItem}>
-              <div className={styles.faqQuestion}>Is there a free trial?</div>
-              <div className="small">
-                Yes, start with our Free plan to explore all basic features.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      </div>
+          </Col>
+        </Row>
+      </Container>
     </div>
   );
 }
