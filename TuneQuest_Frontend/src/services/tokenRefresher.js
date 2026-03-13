@@ -222,7 +222,7 @@ export const getReadableTimeUntilRefresh = () => {
   return parts.length > 0 ? parts.join(' ') : 'Less than a minute';
 };
 
-export default {
+const tokenRefresher = {
   getCurrentPacificTime,
   isMidnightPT,
   getPTDateString,
@@ -235,3 +235,5 @@ export default {
   getTimeUntilNextRefresh,
   getReadableTimeUntilRefresh,
 };
+
+export default tokenRefresher;

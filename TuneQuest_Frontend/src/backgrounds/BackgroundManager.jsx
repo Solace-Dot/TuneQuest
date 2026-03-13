@@ -2,17 +2,6 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSelector } from 'react-redux';
 
-const BASE = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  width: '100vw',
-  height: '100vh',
-  zIndex: -1,
-  overflow: 'hidden',
-  pointerEvents: 'none',
-};
-
 
 // Particle data is generated once per component mount
 function useParticles(count) {
@@ -22,7 +11,7 @@ function useParticles(count) {
     size: Math.random() * 18 + 8,
     delay: -(Math.random() * 20),
     duration: Math.random() * 10 + 10,
-  })), []);
+  })), [count]);
 }
 
 function FloatingNotes() {
@@ -724,15 +713,17 @@ function MusicMathLight() {
 
 /* ── 5L. Starfield — Light ── */
 function StarfieldLight() {
-  const SPARKLE_COLORS = ['#818cf8', '#c084fc', '#fb7185', '#38bdf8', '#34d399', '#fbbf24'];
-  const stars = useMemo(() => Array.from({ length: 70 }, () => ({
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 4 + 1.5,
-    duration: Math.random() * 8 + 6,
-    delay: -(Math.random() * 14),
-    color: SPARKLE_COLORS[Math.floor(Math.random() * SPARKLE_COLORS.length)],
-  })), []);
+  const stars = useMemo(() => {
+    const SPARKLE_COLORS = ['#818cf8', '#c084fc', '#fb7185', '#38bdf8', '#34d399', '#fbbf24'];
+    return Array.from({ length: 70 }, () => ({
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 4 + 1.5,
+      duration: Math.random() * 8 + 6,
+      delay: -(Math.random() * 14),
+      color: SPARKLE_COLORS[Math.floor(Math.random() * SPARKLE_COLORS.length)],
+    }));
+  }, []);
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: '#eef4ff', zIndex: -1, overflow: 'hidden' }}>
       {/* Soft glow blobs */}

@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Container, Row, Col } from "react-bootstrap";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { setSubscription } from "../redux/slices/authSlice";
+import { setTokens } from "../redux/slices/aiPlanSlice";
 import {
   API_BASE_URL,
   capturePayPalOrder,
@@ -12,33 +13,50 @@ import {
 } from "../api/client";
 import styles from "../styles/screens/SubscriptionPage.module.css";
 
+const PREMIUM_TOKEN_LIMIT = 50;
+const FREE_TOKEN_LIMIT = 10;
+
 const plans = [
   {
     key: "free",
     title: "Free Trial",
     price: "$0",
     badge: "Current",
+    description: "Perfect for exploring TuneQuest",
     features: [
       { label: "AI-Generated Practice Plans", included: true },
       { label: "Real-time Interactive Feedback", included: true },
       { label: "Unlimited Practice Sessions", included: true },
+      { label: "10 AI Tokens / month", included: true },
+      { label: "Song Timeline Generation", included: true },
+      { label: "AI Quiz Generation", included: true },
+      { label: "Basic Progress Tracking", included: true },
       { label: "Regenerate AI Plan (Limited)", included: false },
       { label: "Detailed AI Progress Summaries", included: false },
+      { label: "Priority Support", included: false },
       { label: "Ad-free Experience", included: false },
+      { label: "Monthly Insights Report", included: false },
     ],
   },
   {
     key: "premium",
     title: "Premium Quest",
     price: "$9.99",
-    badge: "Upgrade",
+    badge: "Most Popular",
+    description: "For serious musicians",
     features: [
       { label: "AI-Generated Practice Plans", included: true },
       { label: "Real-time Interactive Feedback", included: true },
       { label: "Unlimited Practice Sessions", included: true },
+      { label: "50 AI Tokens / month (5× more)", included: true },
+      { label: "Song Timeline Generation", included: true },
+      { label: "AI Quiz Generation", included: true },
+      { label: "Basic Progress Tracking", included: true },
       { label: "Regenerate AI Plan (Unlimited Refreshes)", included: true },
       { label: "Detailed AI Progress Summaries", included: true },
+      { label: "Priority Support", included: true },
       { label: "Ad-free Experience", included: true },
+      { label: "Monthly Insights Report", included: true },
     ],
   },
 ];
@@ -94,6 +112,7 @@ function SubscriptionPage() {
   const handleApprove = async (data) => {
     const result = await capturePayPalOrder(data.orderID);
     dispatch(setSubscription("premium"));
+    dispatch(setTokens(PREMIUM_TOKEN_LIMIT));
     setPaymentSuccess("Payment complete. Your Premium plan is now active.");
     return result;
   };
@@ -103,6 +122,7 @@ function SubscriptionPage() {
       setPaymentError("");
       const result = await capturePayPalOrder(`MOCK-LOCAL-${Date.now()}`);
       dispatch(setSubscription("premium"));
+      dispatch(setTokens(PREMIUM_TOKEN_LIMIT));
       setPaymentSuccess(
         result?.detail || "Mock payment complete. Your Premium plan is now active.",
       );
@@ -118,11 +138,12 @@ function SubscriptionPage() {
           <h2 className={styles.title}>Choose Your Plan</h2>
           <p className="subtext">
             Unlock unlimited practice sessions and AI insights to accelerate
-            your musical growth.
+            your musical growth. Start free, upgrade anytime.
           </p>
+          <br />
           <div className={styles.current}>
             Current Plan:{" "}
-            {subscription === "premium" ? "Premium" : "Free Trial"}
+            {subscription === "premium" ? "Premium Quest" : "Free Trial"}
           </div>
         </div>
 
@@ -138,9 +159,7 @@ function SubscriptionPage() {
                   <div>
                     <div className={styles.planTitle}>{plan.title}</div>
                     <div className={styles.planSubtitle}>
-                      {plan.key === "free"
-                        ? "Perfect for getting started"
-                        : "Unlock your full potential"}
+                      {plan.description}
                     </div>
                   </div>
                   <div className="pill">{plan.badge}</div>
@@ -166,6 +185,7 @@ function SubscriptionPage() {
                     </div>
                   ))}
                 </div>
+                <br />
                 {plan.key === "premium" ? (
                   subscription === "premium" ? (
                     <button className="btn btn-outline" disabled>
@@ -177,7 +197,7 @@ function SubscriptionPage() {
                     </button>
                   ) : !paypalOptions ? (
                     <button className="btn btn-outline" disabled>
-                      Loading PayPal...
+                      Loading Checkout...
                     </button>
                   ) : paypalConfig?.mockMode ? (
                     <button className="btn btn-primary" onClick={handleMockCheckout}>

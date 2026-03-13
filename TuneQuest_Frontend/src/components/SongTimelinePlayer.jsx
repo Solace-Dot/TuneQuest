@@ -618,7 +618,7 @@ export default function SongTimelinePlayer({
       if (audioTickRef.current) cancelAnimationFrame(audioTickRef.current);
       audioTickRef.current = null;
     };
-  }, [screen, status, gainLevel, activeMode, effectivePayload, isTimelinePlaying, onSessionComplete, score]);
+  }, [screen, status, gainLevel, activeMode, effectivePayload, isTimelinePlaying, onSessionComplete, score]); // eslint-disable-line react-hooks/exhaustive-deps -- metronome, playPillAudio, markPillHit are stable refs/functions
 
   useEffect(() => () => {
     clearCountdownTimers();

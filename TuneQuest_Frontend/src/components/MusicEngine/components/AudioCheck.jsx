@@ -31,9 +31,11 @@ const AudioCheck = ({ onPass }) => {
   const [volume, setVolume]             = useState(0);
   const [pitch, setPitch]               = useState(null);
   const [noteInfo, setNoteInfo]         = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [signalOk, setSignalOk]         = useState(false);
   const [gainLevel, setGainLevel]       = useState(2);
   const [liveChord, setLiveChord]       = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [chordConfidence, setChordConfidence] = useState(0);
   const [calibrating, setCalibrating]   = useState(false);
   const [testStep, setTestStep]         = useState(0);
@@ -45,7 +47,7 @@ const AudioCheck = ({ onPass }) => {
     if (animRef.current) cancelAnimationFrame(animRef.current);
     if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
     if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
-  }, []);
+  }, [metronome]);
 
   const startCheck = useCallback(async () => {
     setStatus('requesting');
@@ -226,7 +228,7 @@ const AudioCheck = ({ onPass }) => {
       console.error(err);
       setStatus('error');
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- intentional closure for continuous audio processing
 
   const handleContinue    = () => { cleanup(); onPass(gainLevel); };
   const handleGainChange  = (val) => {
