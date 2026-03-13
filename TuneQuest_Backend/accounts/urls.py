@@ -5,12 +5,13 @@ from .views import (
     LoginView,
     ProfileView,
     ForgotPasswordView,
+    CustomTokenRefreshView,
 )
 
 urlpatterns = [
     path("register/", RegisterView.as_view()),
     path("login/", LoginView.as_view()),
-    path("token/refresh/", TokenRefreshView.as_view()),
+    path("token/refresh/", CustomTokenRefreshView.as_view()),
     path("forgot-password/", ForgotPasswordView.as_view()),
     path("profile/", ProfileView.as_view()),
 ]

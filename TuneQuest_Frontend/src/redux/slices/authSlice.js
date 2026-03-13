@@ -33,23 +33,39 @@ const authSlice = createSlice({
       state.subscription = action.payload;
     },
     loginSuccess: (state, action) => {
-      const { token, user, subscription } = action.payload;
+      const { token, user, subscription, refresh } = action.payload;
       state.token = token;
       state.user = user;
       state.subscription = subscription || "free";
       state.error = null;
       state.isLoading = false;
-      const authData = { token, user, subscription: subscription || "free" };
+      const existingAuth = localStorage.getItem("tunequest-auth")
+        ? JSON.parse(localStorage.getItem("tunequest-auth"))
+        : {};
+      const authData = {
+        token,
+        user,
+        subscription: subscription || "free",
+        refresh: refresh || existingAuth.refresh || null,
+      };
       localStorage.setItem("tunequest-auth", JSON.stringify(authData));
     },
     registerSuccess: (state, action) => {
-      const { token, user, subscription } = action.payload;
+      const { token, user, subscription, refresh } = action.payload;
       state.token = token;
       state.user = user;
       state.subscription = subscription || "free";
       state.error = null;
       state.isLoading = false;
-      const authData = { token, user, subscription: subscription || "free" };
+      const existingAuth = localStorage.getItem("tunequest-auth")
+        ? JSON.parse(localStorage.getItem("tunequest-auth"))
+        : {};
+      const authData = {
+        token,
+        user,
+        subscription: subscription || "free",
+        refresh: refresh || existingAuth.refresh || null,
+      };
       localStorage.setItem("tunequest-auth", JSON.stringify(authData));
     },
     logout: (state) => {

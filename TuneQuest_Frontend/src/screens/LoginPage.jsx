@@ -1,31 +1,51 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { Container, Row, Col } from "react-bootstrap";
 import { loginSuccess, setError as setAuthError } from "../redux/slices/authSlice";
 import styles from "../styles/screens/AuthPage.module.css";
+import { loginUser, getProfile } from "../services/api";
 
 function LoginPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [showToast, setShowToast] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (error) {
+      setShowToast(true);
+      const timer = setTimeout(() => setShowToast(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    try {
-      // Simulate login - replace with actual API call
-      const mockUser = { name: "Musician", email: form.email };
-      const mockToken = "mock-jwt-token-" + Date.now();
-      dispatch(loginSuccess({ token: mockToken, user: mockUser, subscription: "free" }));
-      navigate("/dashboard");
-    } catch (err) {
-      setError("Unable to login.");
-      dispatch(setAuthError("Unable to login."));
-    }
-  };
-
+  e.preventDefault();
+  setError("");
+  setShowToast(false);
+  setIsLoading(true);
+  try {
+    const response = await loginUser({ email: form.email, password: form.password });
+    const { access, refresh } = response.data;
+    
+    localStorage.setItem("tunequest-auth", JSON.stringify({ token: access, refresh }));
+    
+    // fetch real user data from backend
+    const profileResponse = await getProfile();
+    const user = profileResponse.data;
+    
+    dispatch(loginSuccess({ token: access, refresh, user, subscription: "free" }));
+    navigate("/dashboard");
+  } catch (err) {
+    const msg = err.response?.data?.detail || err.response?.data?.error || "Unable to login. Please try again.";
+    setError(msg);
+    dispatch(setAuthError(msg));
+    setIsLoading(false);
+  }
+};
   return (
     <div className="page-shell">
       <Container>
@@ -60,9 +80,13 @@ function LoginPage() {
                       required
                     />
                   </label>
-                  {error && <div className="alert alert-error">{error}</div>}
-                  <button className="btn btn-primary" type="submit">
-                    Sign In
+                  <button 
+                    className="btn btn-primary" 
+                    type="submit"
+                    disabled={isLoading}
+                    style={{ opacity: isLoading ? 0.7 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
+                  >
+                    {isLoading ? 'Signing in...' : 'Sign In'}
                   </button>
                 </form>
                 <div className={styles.linkRow}>
@@ -74,13 +98,48 @@ function LoginPage() {
               </div>
               <div className={styles.demoBox}>
                 <strong>Demo Credentials</strong>
-                <div className="small">Email: demo@example.com</div>
-                <div className="small">Password: demo123</div>
+                <div className="small">Email: test@example.com</div>
+                <div className="small">Password: testpass123</div>
               </div>
             </div>
           </Col>
         </Row>
       </Container>
+      
+      {/* Error Toast Notification */}
+      {showToast && error && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: '#dc2626',
+          color: '#fff',
+          padding: '14px 20px',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
+          zIndex: 9999,
+          maxWidth: '400px',
+          animation: 'slideUp 0.3s ease',
+          fontWeight: 500,
+          fontSize: '14px',
+        }}>
+          {error}
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

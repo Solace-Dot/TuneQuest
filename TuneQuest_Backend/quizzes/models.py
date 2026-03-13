@@ -34,3 +34,4 @@ class Question(models.Model):
 class UserQuizAttempt(models.Model):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
     score = models.IntegerField()
+    

@@ -1,77 +1,577 @@
-.header {
-  margin-bottom: 10px;
+/* ─── Page Header ─────────────────────────────────────────── */
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
-.recHeader {
+.songSelect {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  margin-bottom: 6px;
+  font-family: inherit;
+}
+
+.songSelect:focus {
+  outline: none;
+  border-color: var(--primary-soft);
+}
+
+.songSelect option {
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.skillBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(95, 224, 192, 0.1);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 14px;
+  border: 1px solid rgba(95, 224, 192, 0.22);
+  white-space: nowrap;
+}
+
+.skillDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ─── Tier Status Bar ─────────────────────────────────────── */
+.tierBar {
+  margin-bottom: 16px;
+}
+
+.tierBarInner {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.tierLabel {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 3px;
+}
+
+.tierCount {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.tierSlots {
+  display: flex;
+  gap: 6px;
   align-items: center;
 }
 
-.indicator {
+.slot {
+  width: 36px;
+  height: 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.slot[data-filled="true"] {
+  background: var(--success);
+  border-color: var(--success);
+  box-shadow: 0 0 8px rgba(99, 230, 190, 0.45);
+}
+
+.tierWarning {
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+/* ─── Mastery Seal Tracker ────────────────────────────────── */
+.sealCard {
+  margin-bottom: 20px;
+}
+
+.sealHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.sealTitle {
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--text);
+}
+
+.sealSubtitle {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.seals {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .seals {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.seal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  filter: grayscale(1);
+  opacity: 0.42;
+  transition: filter 0.3s ease, opacity 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+  overflow: hidden;
+}
+
+.seal[data-unlocked="true"] {
+  filter: none;
+  opacity: 1;
+  border-color: rgba(129, 92, 249, 0.4);
+  background: rgba(129, 92, 249, 0.08);
+}
+
+.sealIcon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.sealLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.seal[data-unlocked="true"] .sealLabel {
+  color: var(--primary-soft);
+}
+
+.sealGlow {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  box-shadow: inset 0 0 22px rgba(129, 92, 249, 0.22);
+  pointer-events: none;
+}
+
+/* ─── Discipline Navigation Tabs ──────────────────────────── */
+.tabNav {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 20px;
+  scrollbar-width: none;
+}
+
+.tabNav::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--muted);
-}
-
-.indicator[data-active="true"] {
-  background: rgba(255, 101, 132, 0.12);
-  color: var(--danger);
-}
-
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--danger);
-  opacity: 0.7;
-  animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.4;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-}
-
-.controls {
-  display: flex;
-  gap: 10px;
-  margin: 12px 0;
-}
-
-.playback {
-  margin: 10px 0;
-}
-
-.list {
-  display: grid;
-  gap: 10px;
-}
-
-.exercise {
+  padding: 8px 16px;
+  border-radius: 999px;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+.tab[data-active="true"] {
+  background: rgba(129, 92, 249, 0.16);
+  border-color: rgba(129, 92, 249, 0.42);
+  color: var(--primary-soft);
+}
+
+/* ─── Exercise Card Grid ──────────────────────────────────── */
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.exerciseCard {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  outline: none;
+}
+
+.exerciseCard:hover,
+.exerciseCard:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgba(129, 92, 249, 0.38);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.38);
+}
+
+.cardTop {
+  margin-bottom: 12px;
+}
+
+.cardTitleRow {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+  margin-bottom: 10px;
 }
 
 .exerciseTitle {
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 16px;
   color: var(--text);
+  line-height: 1.3;
+}
+
+.categoryTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cardBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.statusTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.skillTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.scoreRow {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.scoreLabel {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.scoreValue {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.expandHint {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+/* ─── Empty State ─────────────────────────────────────────── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 52px 20px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.emptyIcon {
+  font-size: 44px;
+}
+
+/* ─── Modal Overlay & Panel ───────────────────────────────── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal {
+  background: linear-gradient(145deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+  max-width: 560px;
+  width: 100%;
+  position: relative;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modalClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.modalClose:hover {
+  background: rgba(255, 255, 255, 0.13);
+  color: var(--text);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-right: 36px;
+}
+
+.modalCategory {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.modalBadges {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+  align-items: flex-end;
+}
+
+/* ─── Lore Block ──────────────────────────────────────────── */
+.loreBlock {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 12px 12px 0;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.loreLabel {
+  color: var(--primary-soft);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 7px;
+}
+
+.loreText {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.65;
+  margin: 0;
+  font-style: italic;
+}
+
+/* ─── Technical Preview ───────────────────────────────────── */
+.techBlock {
+  margin-bottom: 20px;
+}
+
+.techLabel {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.techGrid {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+}
+
+.techItem {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.techItemLabel {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.bpmDisplay {
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.patternTag {
+  margin-top: 6px;
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(95, 224, 192, 0.1);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.chordRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chordChip {
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(129, 92, 249, 0.12);
+  border: 1px solid rgba(129, 92, 249, 0.3);
+  color: var(--primary-soft);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.questionTypeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: rgba(95, 224, 192, 0.1);
+  border: 1px solid rgba(95, 224, 192, 0.25);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* ─── Modal Scores ────────────────────────────────────────── */
+.modalScores {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.modalScoreBox {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: center;
+}
+
+.modalScoreValue {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--text);
+}
+
+/* ─── Action Row ──────────────────────────────────────────── */
+.actionRow {
+  display: flex;
+  gap: 10px;
+}
+
+.actionBtn {
+  flex: 1;
 }

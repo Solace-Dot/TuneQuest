@@ -4,25 +4,35 @@ import { useDispatch } from "react-redux";
 import { Container, Row, Col } from "react-bootstrap";
 import { registerSuccess, setError as setAuthError } from "../redux/slices/authSlice";
 import styles from "../styles/screens/AuthPage.module.css";
+import { registerUser } from "../services/api";
 
 function RegisterPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ username: "", email: "", password: "" });
   const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      // Simulate registration - replace with actual API call
-      const mockToken = "mock-jwt-token-" + Date.now();
-      dispatch(registerSuccess({ token: mockToken, user: form, subscription: "free" }));
-      navigate("/dashboard");
-    } catch (err) {
-      setError("Unable to register.");
-      dispatch(setAuthError("Unable to register."));
+  e.preventDefault();
+  setError("");
+  try {
+    const response = await registerUser({ username: form.username, email: form.email, password: form.password });
+    const { access, refresh } = response.data;
+    localStorage.setItem("tunequest-auth", JSON.stringify({ token: access, refresh }));
+    dispatch(registerSuccess({ token: access, refresh, user: { username: form.username, email: form.email }, subscription: "free" }));
+    navigate("/dashboard");
+  } catch (err) {
+    const data = err.response?.data;
+    if (data?.email) {
+      setError(data.email[0]);
+    } else if (data?.username) {
+      setError(data.username[0]);
+    } else {
+      setError(data?.detail || "Unable to register.");
     }
-  };
+    dispatch(setAuthError("Unable to register."));
+    }
+};
 
   return (
     <div className="page-shell">
@@ -37,12 +47,12 @@ function RegisterPage() {
                 </p>
                 <form className={styles.form} onSubmit={handleSubmit}>
                   <label className="form-field">
-                    <span>Full Name</span>
+                    <span>Username</span>
                     <input
                       className="input"
-                      value={form.name}
-                      onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      placeholder="Alex Musician"
+                      value={form.username}
+                      onChange={(e) => setForm({ ...form, username: e.target.value })}
+                      placeholder="alexmusician"
                       required
                     />
                   </label>

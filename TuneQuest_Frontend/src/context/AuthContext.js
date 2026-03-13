@@ -17,11 +17,29 @@ const defaultUser = {
 function AuthProvider({ children }) {
   const [state, setState] = useState(() => {
     const stored = localStorage.getItem("tunequest-auth");
-    return stored ? JSON.parse(stored) : { token: null, user: null };
+    if (!stored) return { token: null, user: null };
+    const parsed = JSON.parse(stored);
+    return {
+      token: parsed.token || null,
+      user: parsed.user || null,
+      refresh: parsed.refresh || null,
+      subscription: parsed.subscription || parsed.user?.subscription || "free",
+    };
   });
 
   useEffect(() => {
-    localStorage.setItem("tunequest-auth", JSON.stringify(state));
+    const existing = localStorage.getItem("tunequest-auth")
+      ? JSON.parse(localStorage.getItem("tunequest-auth"))
+      : {};
+    const merged = {
+      ...existing,
+      ...state,
+      token: state.token || existing.token || null,
+      refresh: state.refresh || existing.refresh || null,
+      subscription:
+        state.subscription || state.user?.subscription || existing.subscription || "free",
+    };
+    localStorage.setItem("tunequest-auth", JSON.stringify(merged));
   }, [state]);
 
   const login = async (credentials) => {

@@ -11,21 +11,28 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=e78h7&fh&&cawbq1^6jq7dm8ck2$*tk(biu+kazfwe-2g#&y3'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG')
 
-ALLOWED_HOSTS = []
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
 
 
 # Application definition
@@ -41,10 +48,11 @@ INSTALLED_APPS = [
     'corsheaders',
     'accounts',
     'exercises',
-    'goals',
     'quizzes',
     'progress',
     'payments',
+    'ai_utils',
+    'learn',
 ]
 
 MIDDLEWARE = [
@@ -126,9 +134,32 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 
+# CORS configuration
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-]   
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+]
+
+# During development, allow credentials to be included in CORS requests
+CORS_ALLOW_CREDENTIALS = True
+
+# Allow all headers during development
+CORS_ALLOW_ALL_HEADERS = True
+
+# Allow common HTTP methods
+CORS_ALLOWED_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 AUTH_USER_MODEL = "accounts.User"
 

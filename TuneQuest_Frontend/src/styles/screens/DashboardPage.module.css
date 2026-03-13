@@ -10,103 +10,160 @@
   margin: 0 0 18px;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-.textcolor {
-  color: var(--text);
+.label {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .cardHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
-}
-
-.label {
-  color: var(--muted);
-  font-size: 13px;
+  margin-bottom: 14px;
 }
 
 .cardTitle {
   font-weight: 800;
   font-size: 18px;
   color: var(--text);
-}
-
-.metaRow {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  line-height: 1.3;
 }
 
 .metaLabel {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
+  margin-bottom: 2px;
 }
 
 .metaValue {
   font-weight: 700;
   color: var(--text);
+  font-size: 15px;
 }
 
-.statRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.statsGrid {
+/* ─── Profile Grid ──────────────────────────────────────────── */
+.profileGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.cardLink {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary-soft);
+  text-decoration: none;
+}
+
+.cardLink:hover {
+  color: var(--primary);
+}
+
+/* ─── Plan Stats ────────────────────────────────────────────── */
+.planMeta {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
+  margin: 14px 0 16px;
+}
+
+@media (max-width: 576px) {
+  .planMeta {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .statBox {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 10px 12px;
   text-align: center;
 }
 
 .statNumber {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--text);
-}
-
-.progressGrid {
-  display: grid;
-  grid-template-columns: 80px 1fr;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.largeNumber {
-  font-size: 32px;
+  font-size: 20px;
   font-weight: 900;
   color: var(--text);
 }
 
-.actionsCard {
-  grid-column: span 1;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px;
-  display: grid;
+/* ─── Empty Plan ────────────────────────────────────────────── */
+.emptyPlan {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 10px;
+  padding: 24px 0 8px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
 }
 
-.buttonsRow {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 10px;
+.emptyPlanIcon {
+  font-size: 36px;
+}
+
+/* ─── Quick Links ───────────────────────────────────────────── */
+.quickCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  transition: all 0.18s ease;
+  height: 100%;
+}
+
+.quickCard:hover {
+  border-color: var(--primary-soft);
+  background: rgba(129, 92, 249, 0.07);
+  transform: translateY(-2px);
+}
+
+.quickIcon {
+  font-size: 26px;
+}
+
+.quickLabel {
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.quickDesc {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ─── Premium Upsell ────────────────────────────────────────── */
+.upsellBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: rgba(129, 92, 249, 0.07);
+  border: 1px solid rgba(129, 92, 249, 0.25);
+  font-size: 14px;
+  color: var(--text);
+}
+
+.upsellText {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 576px) {
+  .upsellBanner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
