@@ -3,7 +3,19 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { Container, Row, Col } from "react-bootstrap";
 import { registerSuccess, setError as setAuthError } from "../redux/slices/authSlice";
+import { fetchProfileWithToken, registerUser } from "../api/client";
 import styles from "../styles/screens/AuthPage.module.css";
+
+function toUsername(name, email) {
+  const base = (name || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  if (base) {
+    return base.slice(0, 30);
+  }
+  return (email.split("@")[0] || "user").slice(0, 30);
+}
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -14,13 +26,30 @@ function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Simulate registration - replace with actual API call
-      const mockToken = "mock-jwt-token-" + Date.now();
-      dispatch(registerSuccess({ token: mockToken, user: form, subscription: "free" }));
+      const username = toUsername(form.name, form.email);
+      const tokens = await registerUser({
+        email: form.email,
+        username,
+        password: form.password,
+      });
+      const token = tokens?.access;
+
+      if (!token) {
+        throw new Error("No access token returned from registration.");
+      }
+
+      const user = await fetchProfileWithToken(token);
+      dispatch(registerSuccess({ token, user, subscription: "free" }));
       navigate("/dashboard");
     } catch (err) {
-      setError("Unable to register.");
-      dispatch(setAuthError("Unable to register."));
+      const firstFieldError =
+        Object.values(err?.response?.data || {}).find((value) =>
+          Array.isArray(value),
+        )?.[0] || "";
+      const detail =
+        err?.response?.data?.detail || firstFieldError || "Unable to register.";
+      setError(detail);
+      dispatch(setAuthError(detail));
     }
   };
 
@@ -68,6 +97,7 @@ function RegisterPage() {
                       required
                     />
                   </label>
+                  {error && <div className="alert alert-error">{error}</div>}
                   <button className="btn btn-primary" type="submit">
                     Sign Up
                   </button>

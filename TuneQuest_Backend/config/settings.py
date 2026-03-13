@@ -10,20 +10,27 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from project root and backend root .env files.
+load_dotenv(BASE_DIR.parent / ".env", override=True)
+load_dotenv(BASE_DIR / ".env", override=True)
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=e78h7&fh&&cawbq1^6jq7dm8ck2$*tk(biu+kazfwe-2g#&y3'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-=e78h7&fh&&cawbq1^6jq7dm8ck2$*tk(biu+kazfwe-2g#&y3')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'true').lower() == 'true'
 
 ALLOWED_HOSTS = []
 
@@ -148,3 +155,10 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+# Payment configuration
+PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "")
+PAYPAL_SECRET = os.getenv("PAYPAL_SECRET", "")
+PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox")
+PAYPAL_CURRENCY = os.getenv("PAYPAL_CURRENCY", "USD")
+PAYPAL_PREMIUM_PRICE = os.getenv("PAYPAL_PREMIUM_PRICE", "9.99")

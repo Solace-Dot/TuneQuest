@@ -1,15 +1,22 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+let storedAuth = null;
+try {
+  const raw = localStorage.getItem("tunequest-auth");
+  storedAuth = raw ? JSON.parse(raw) : null;
+} catch (_err) {
+  storedAuth = null;
+}
+
+if (storedAuth?.token?.startsWith("mock-jwt-token-")) {
+  localStorage.removeItem("tunequest-auth");
+  storedAuth = null;
+}
+
 const initialState = {
-  token: localStorage.getItem("tunequest-auth")
-    ? JSON.parse(localStorage.getItem("tunequest-auth")).token
-    : null,
-  user: localStorage.getItem("tunequest-auth")
-    ? JSON.parse(localStorage.getItem("tunequest-auth")).user
-    : null,
-  subscription: localStorage.getItem("tunequest-auth")
-    ? JSON.parse(localStorage.getItem("tunequest-auth")).subscription || "free"
-    : "free",
+  token: storedAuth?.token || null,
+  user: storedAuth?.user || null,
+  subscription: storedAuth?.subscription || "free",
   error: null,
   isLoading: false,
 };
@@ -31,6 +38,14 @@ const authSlice = createSlice({
     },
     setSubscription: (state, action) => {
       state.subscription = action.payload;
+      if (state.token && state.user) {
+        const authData = {
+          token: state.token,
+          user: state.user,
+          subscription: action.payload,
+        };
+        localStorage.setItem("tunequest-auth", JSON.stringify(authData));
+      }
     },
     loginSuccess: (state, action) => {
       const { token, user, subscription } = action.payload;

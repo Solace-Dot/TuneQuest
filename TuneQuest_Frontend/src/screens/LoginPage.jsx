@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { Container, Row, Col } from "react-bootstrap";
 import { loginSuccess, setError as setAuthError } from "../redux/slices/authSlice";
+import { fetchProfileWithToken, loginUser } from "../api/client";
 import styles from "../styles/screens/AuthPage.module.css";
 
 function LoginPage() {
@@ -15,14 +16,26 @@ function LoginPage() {
     e.preventDefault();
     setError("");
     try {
-      // Simulate login - replace with actual API call
-      const mockUser = { name: "Musician", email: form.email };
-      const mockToken = "mock-jwt-token-" + Date.now();
-      dispatch(loginSuccess({ token: mockToken, user: mockUser, subscription: "free" }));
+      const tokens = await loginUser({
+        email: form.email,
+        password: form.password,
+      });
+      const token = tokens?.access;
+
+      if (!token) {
+        throw new Error("No access token returned from login.");
+      }
+
+      const user = await fetchProfileWithToken(token);
+      dispatch(loginSuccess({ token, user, subscription: "free" }));
       navigate("/dashboard");
     } catch (err) {
-      setError("Unable to login.");
-      dispatch(setAuthError("Unable to login."));
+      const detail =
+        err?.response?.data?.detail ||
+        err?.response?.data?.non_field_errors?.[0] ||
+        "Unable to login.";
+      setError(detail);
+      dispatch(setAuthError(detail));
     }
   };
 
@@ -73,9 +86,8 @@ function LoginPage() {
                 </div>
               </div>
               <div className={styles.demoBox}>
-                <strong>Demo Credentials</strong>
-                <div className="small">Email: demo@example.com</div>
-                <div className="small">Password: demo123</div>
+                <strong>Backend Auth Enabled</strong>
+                <div className="small">Use your registered account credentials.</div>
               </div>
             </div>
           </Col>

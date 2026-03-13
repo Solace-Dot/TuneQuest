@@ -1,7 +1,10 @@
 import axios from "axios";
 
+export const API_BASE_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:8000";
+
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "https://api.tunequest.local",
+  baseURL: API_BASE_URL,
 });
 
 api.interceptors.request.use((config) => {
@@ -68,6 +71,42 @@ export async function fetchProgress() {
     latestScore: 88,
     focus: "Rhythmic Precision",
   };
+}
+
+export async function fetchPayPalConfig() {
+  const { data } = await api.get("/api/payments/paypal/config/");
+  return data;
+}
+
+export async function loginUser(credentials) {
+  const { data } = await api.post("/api/auth/login/", credentials);
+  return data;
+}
+
+export async function registerUser(payload) {
+  const { data } = await api.post("/api/auth/register/", payload);
+  return data;
+}
+
+export async function fetchProfileWithToken(token) {
+  const { data } = await axios.get(`${API_BASE_URL}/api/auth/profile/`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return data;
+}
+
+export async function createPayPalOrder(plan = "premium") {
+  const { data } = await api.post("/api/payments/paypal/orders/", { plan });
+  return data;
+}
+
+export async function capturePayPalOrder(orderID) {
+  const { data } = await api.post(
+    `/api/payments/paypal/orders/${orderID}/capture/`,
+  );
+  return data;
 }
 
 export default api;
