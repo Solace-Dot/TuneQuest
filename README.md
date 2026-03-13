@@ -45,7 +45,7 @@ The platform tracks progress, manages tokens, and provides analytics to help use
 ## 🎯 Key Features
 
 ### 🤖 AI-Powered
-- Claude AI integration for quiz and lesson generation
+- GEMINI integration for quiz and lesson generation
 - Function calling for structured responses
 - Token-based AI usage limits (Free: 10/day, Premium: unlimited)
 
@@ -80,7 +80,7 @@ The platform tracks progress, manages tokens, and provides analytics to help use
 TuneQuestMain/
 ├── TuneQuest_Backend/          # Django REST API
 │   ├── accounts/               # User auth & profiles
-│   ├── ai_utils/               # Claude AI integrations
+│   ├── ai_utils/               # Gemini AI integrations
 │   ├── exercises/              # Practice plans & exercises
 │   ├── learn/                  # Lesson content
 │   ├── payments/               # Subscription handling (stub)
@@ -109,7 +109,7 @@ TuneQuestMain/
 - **API**: Django REST Framework
 - **Database**: SQLite (dev), PostgreSQL (prod-ready)
 - **Auth**: JWT via djangorestframework-simplejwt
-- **AI**: Anthropic Claude API
+- **AI**: GEMINI API
 - **Other**: pytz, rest_framework
 
 ### Frontend
@@ -224,12 +224,12 @@ See [Frontend README](TuneQuest_Frontend/README.md) for page structure and devel
 
 ### Quiz Generation
 ```
-User → describe topic → Claude generates quiz → store locally → take quiz
+User → describe topic → Gemini generates quiz → store locally → take quiz
 ```
 
 ### Practice Plan Generation
 ```
-User input (instrument, level, goals) → Claude creates plan → store in DB → display exercises
+User input (instrument, level, goals) → Gemini creates plan → store in DB → display exercises
 ```
 
 ### Song Learning
@@ -330,7 +330,7 @@ TuneQuestMain/
 │   ├── db.sqlite3
 │   ├── config/                      # Django config
 │   ├── accounts/                    # Auth & profiles
-│   ├── ai_utils/                    # Claude AI
+│   ├── ai_utils/                    # Gemini AI
 │   ├── exercises/                   # Practice plans
 │   ├── learn/                       # Lessons
 │   └── [other apps...]
