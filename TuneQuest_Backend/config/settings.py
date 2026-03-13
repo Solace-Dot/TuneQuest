@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     'quizzes',
     'progress',
     'payments',
+    'learn',
+    'ai_utils',
 ]
 
 MIDDLEWARE = [
@@ -162,3 +164,4 @@ PAYPAL_SECRET = os.getenv("PAYPAL_SECRET", "")
 PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox")
 PAYPAL_CURRENCY = os.getenv("PAYPAL_CURRENCY", "USD")
 PAYPAL_PREMIUM_PRICE = os.getenv("PAYPAL_PREMIUM_PRICE", "9.99")
+PAYPAL_MOCK_MODE = os.getenv("PAYPAL_MOCK_MODE", "true").lower() == "true"
