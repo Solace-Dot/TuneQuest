@@ -2,6 +2,12 @@ import React, { createContext, useContext, useMemo, useState } from "react";
 
 const ProfileContext = createContext(undefined);
 
+function useProfile() {
+  const ctx = useContext(ProfileContext);
+  if (!ctx) throw new Error("useProfile must be used inside ProfileProvider");
+  return ctx;
+}
+
 const defaultProfile = {
   instrument: "Guitar",
   level: "Intermediate",
@@ -36,10 +42,5 @@ function ProfileProvider({ children }) {
   );
 }
 
-function useProfile() {
-  const ctx = useContext(ProfileContext);
-  if (!ctx) throw new Error("useProfile must be used inside ProfileProvider");
-  return ctx;
-}
 
 export { ProfileProvider, useProfile };

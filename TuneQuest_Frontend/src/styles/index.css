@@ -1,5 +1,10 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700&display=swap");
 
+@keyframes countdownPop {
+  from { transform: scale(1.4); opacity: 0.4; }
+  to   { transform: scale(1);   opacity: 1;   }
+}
+
 /* Dark Theme (Default) */
 :root {
   --bg: #0c0c11;

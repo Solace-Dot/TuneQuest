@@ -1,0 +1,350 @@
+/* ── ChatWidget ── matches app dark/light theme via CSS variables ── */
+
+.container {
+  position: fixed;
+  z-index: 9999;
+  font-family: inherit;
+  user-select: none;
+  touch-action: none;
+  /* width/height is just the button; window/teaser use position:absolute */
+}
+
+/* ── Floating Toggle Button ── */
+.floatingBtn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 10000;
+  outline: none;
+}
+
+@media (max-width: 768px) {
+  .floatingBtn {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+}
+
+.floatingBtnClosed {
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+  box-shadow: 0 8px 28px rgba(129, 92, 249, 0.5);
+}
+
+.floatingBtnClosed:hover {
+  transform: scale(1.1);
+  box-shadow: 0 12px 36px rgba(129, 92, 249, 0.65);
+}
+
+.floatingBtnOpen {
+  background: var(--danger);
+  transform: rotate(90deg);
+  box-shadow: 0 8px 24px rgba(255, 101, 132, 0.4);
+}
+
+.floatingBtn:active {
+  transform: scale(0.93) !important;
+  cursor: grabbing;
+}
+
+/* ── Teaser Popup ── */
+.teaser {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+  padding: 16px;
+  width: 300px;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  animation: slideIn 0.25s ease;
+}
+
+.teaserClose {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.teaserClose:hover {
+  color: var(--text);
+}
+
+.teaserContent {
+  flex: 1;
+  padding-right: 14px;
+}
+
+.teaserTitle {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+  margin: 0 0 5px;
+}
+
+.teaserStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.teaserDot {
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: pulse 1.6s infinite;
+}
+
+.teaserBtn {
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 10px;
+  white-space: nowrap;
+  transition: opacity 0.2s, transform 0.15s;
+  font-family: inherit;
+}
+
+.teaserBtn:hover {
+  opacity: 0.88;
+  transform: scale(1.03);
+}
+
+/* ── Chat Window ── */
+.window {
+  width: 330px;
+  height: 510px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: popIn 0.2s ease;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(160deg, var(--primary) 0%, var(--primary-strong) 100%);
+  padding: 18px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.tabRow {
+  display: flex;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.tab {
+  flex: 1;
+  padding: 7px 0;
+  border-radius: 9px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  transition: all 0.2s;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: inherit;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.tabActive {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+.headerText {
+  text-align: center;
+}
+
+.headerTitle {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.headerSub {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  margin: 0;
+}
+
+/* Body */
+.body {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.body::-webkit-scrollbar { width: 4px; }
+.body::-webkit-scrollbar-track { background: transparent; }
+.body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.faqList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.faqItem {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-2);
+  padding: 10px 12px;
+}
+
+.faqQuestion {
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  list-style: none;
+}
+
+.faqQuestion::-webkit-details-marker {
+  display: none;
+}
+
+.faqAnswer {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* Bot message bubble */
+.msgBot {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 16px;
+  border-top-left-radius: 4px;
+  font-size: 13px;
+  align-self: flex-start;
+  max-width: 85%;
+  line-height: 1.5;
+}
+
+.msgBot.clickable {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.msgBot.clickable:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+/* Footer / Input */
+.footer {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.input::placeholder { color: var(--muted); }
+.input:focus { border-color: var(--primary); }
+
+.sendBtn {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.sendBtn:hover {
+  transform: scale(1.07);
+  box-shadow: 0 4px 16px rgba(129, 92, 249, 0.5);
+}
+
+.sendBtn:active { transform: scale(0.93); }
+
+/* ── Animations ── */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(14px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.93) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}

@@ -26,7 +26,10 @@ function LandingPage() {
               </p>
               <div className={styles.ctas}>
                 <Link to="/login" className="btn btn-primary">
-                  Login / Register
+                  Login
+                </Link>
+                <Link to="/register" className="btn btn-primary">
+                  Register
                 </Link>
                 <Link to="/subscribe" className="btn btn-outline">
                   Upgrade to Premium

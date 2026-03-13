@@ -1,0 +1,664 @@
+/* ── Page Header ─────────────────────────────────────────────── */
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.pageTitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+
+.pageSubtitle {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* ── Progress Pill ───────────────────────────────────────────── */
+.progressPill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 140px;
+}
+
+.progressCount {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.progressLabel {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: -4px;
+}
+
+.miniBar {
+  width: 120px;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.miniBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+/* ── Category Tabs ───────────────────────────────────────────── */
+.tabRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+.tab {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  border-color: var(--primary);
+  color: var(--text);
+  background: rgba(129, 92, 249, 0.08);
+}
+
+.tabActive {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 4px 14px rgba(129, 92, 249, 0.3);
+}
+
+/* ── Lesson Card ─────────────────────────────────────────────── */
+.lessonCard {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+.lessonCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(129, 92, 249, 0.18);
+}
+
+.lessonCardDone {
+  border-color: rgba(99, 230, 190, 0.3) !important;
+  background: rgba(99, 230, 190, 0.04);
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.categoryIcon {
+  font-size: 22px;
+}
+
+.doneCheck {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--success);
+  background: rgba(99, 230, 190, 0.14);
+  padding: 3px 10px;
+  border-radius: 99px;
+}
+
+.lessonTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.lessonDesc {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+  flex: 1;
+}
+
+/* ── Shared Badges ───────────────────────────────────────────── */
+.lessonMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.diffBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 99px;
+}
+
+.durationBadge {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: var(--panel-2);
+}
+
+.categoryBadge {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: var(--panel-2);
+}
+
+.openHint {
+  font-size: 11px;
+  color: var(--primary-soft);
+  margin-top: 4px;
+  letter-spacing: 0.02em;
+}
+
+/* ── Empty State ─────────────────────────────────────────────── */
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+/* ── Modal Overlay ───────────────────────────────────────────── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+/* ── Modal Header ────────────────────────────────────────────── */
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.modalCat {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.modalTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 10px;
+  line-height: 1.3;
+}
+
+.modalMeta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.modalClose {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.modalClose:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+/* ── Modal Body ──────────────────────────────────────────────── */
+.modalBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.modalBody::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modalBody::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modalBody::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+/* ── Modal Footer ────────────────────────────────────────────── */
+.modalFooter {
+  display: flex;
+  gap: 12px;
+  padding: 20px 28px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+/* ── Content Blocks ──────────────────────────────────────────── */
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.blockHeading {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.blockText {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* ── Tip Block ───────────────────────────────────────────────── */
+.tipBlock {
+  background: rgba(129, 92, 249, 0.08);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 10px 10px 0;
+  padding: 14px 16px;
+}
+
+.tipText {
+  font-size: 13px;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ── Note Grid ───────────────────────────────────────────────── */
+.noteGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.noteChip {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--panel-2);
+}
+
+.noteChipHighlight {
+  color: var(--accent);
+  border-color: rgba(95, 224, 192, 0.3);
+  background: rgba(95, 224, 192, 0.08);
+}
+
+/* ── Formula Row ─────────────────────────────────────────────── */
+.formulaRow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.formulaLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 22px;
+  text-align: center;
+}
+
+.formulaStep {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.wholeStep {
+  background: rgba(129, 92, 249, 0.15);
+  color: var(--primary-soft);
+  border: 1px solid rgba(129, 92, 249, 0.3);
+}
+
+.halfStep {
+  background: rgba(255, 101, 132, 0.12);
+  color: var(--danger);
+  border: 1px solid rgba(255, 101, 132, 0.25);
+}
+
+/* ── Chord Grid ──────────────────────────────────────────────── */
+.chordGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.chordCard {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chordName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.chordFormula {
+  font-size: 12px;
+  color: var(--primary-soft);
+  font-family: monospace;
+}
+
+.chordExample {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.chordMood {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ── Chord Progression ───────────────────────────────────────── */
+.progressionRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.progressionChord {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 18px;
+  text-align: center;
+  min-width: 90px;
+}
+
+.progressionNumeral {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary-soft);
+  margin-bottom: 4px;
+}
+
+.progressionName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.progressionNotes {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.progressionArrow {
+  font-size: 18px;
+  color: var(--muted);
+}
+
+/* ── Table ───────────────────────────────────────────────────── */
+.tableWrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableHead {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 10px 14px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.tableCell {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.tableCellAccent {
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+tr:last-child .tableCell,
+tr:last-child .tableCellAccent {
+  border-bottom: none;
+}
+
+tr:hover .tableCell,
+tr:hover .tableCellAccent {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ─── Recommended for Your Plan ─────────────────────────────── */
+.recommendedSection {
+  margin-bottom: 32px;
+  padding: 20px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(95, 224, 192, 0.06) 0%, rgba(129, 92, 249, 0.06) 100%);
+  border: 1px solid rgba(95, 224, 192, 0.2);
+}
+
+.recommendedHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.recommendedIcon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.recommendedTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.recommendedSubtitle {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.recommendedScroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.recommendedScroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.recommendedScroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+
+.recommendedCard {
+  flex: 0 0 200px;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.recommendedCard:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  background: rgba(95, 224, 192, 0.06);
+}
+
+.recommendedCardDone {
+  border-color: rgba(95, 224, 192, 0.4);
+  opacity: 0.75;
+}
+
+.recommendedCardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.recommendedCardTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.35;
+  margin-bottom: 10px;
+}
+
+.recommendedCardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .modalHeader {
+    padding: 18px 20px 16px;
+  }
+
+  .modalBody {
+    padding: 18px 20px;
+  }
+
+  .modalFooter {
+    padding: 16px 20px;
+    flex-direction: column-reverse;
+  }
+
+  .progressionRow {
+    justify-content: center;
+  }
+
+  .pageHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .progressPill {
+    align-items: flex-start;
+  }
+}

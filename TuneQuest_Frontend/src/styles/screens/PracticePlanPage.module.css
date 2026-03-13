@@ -1,54 +1,341 @@
-.header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  align-items: center;
+/* ─── Focus Header ─────────────────────────────────────────── */
+.focusHeader {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+  align-items: start;
 }
 
-.title {
-  margin: 8px 0 4px;
-  font-size: 24px;
+@media (max-width: 768px) {
+  .focusHeader {
+    grid-template-columns: 1fr;
+  }
+}
+
+.headerContent {
+  padding: 0;
+}
+
+.label {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 3px;
+}
+
+.focusTitle {
+  margin: 0 0 16px;
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metaLabel {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.metaValue {
+  font-size: 16px;
+  font-weight: 800;
   color: var(--text);
 }
 
-.actions {
+.dividerVertical {
+  width: 1px;
+  height: 40px;
+  background: var(--border);
+}
+
+/* ─── Progress Section ─────────────────────────────────────── */
+.progressSection {
   display: flex;
+  flex-direction: column;
   gap: 10px;
 }
 
-.section {
-  margin-top: 18px;
-  display: grid;
-  gap: 12px;
-}
-
-.steps {
-  display: grid;
-  gap: 12px;
-}
-
-.stepHeader {
+.progressLabel {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 13px;
 }
 
-.stepTitle {
-  margin: 6px 0;
+.progressCount {
+  background: rgba(129, 92, 249, 0.1);
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--primary-soft);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.progressBar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--primary-soft));
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.progressText {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ─── Phase Section ────────────────────────────────────────── */
+.phaseSection {
+  margin-bottom: 36px;
+}
+
+.phaseHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding: 0 4px;
+}
+
+.phaseTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
   color: var(--text);
 }
 
-.status {
-  color: var(--primary-soft);
+.phaseCount {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ─── Steps Grid ───────────────────────────────────────────── */
+.stepsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 768px) {
+  .stepsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Active Card (The "Hot" Card) ────────────────────────── */
+.activeCard {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border-left: 4px solid transparent;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.activeCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(129, 92, 249, 0.02) 0%,
+    rgba(95, 224, 192, 0.01) 100%
+  );
+  pointer-events: none;
+}
+
+.activeCard[data-status="Not Started"] {
+  border-left-color: rgba(169, 172, 198, 0.35);
+}
+
+.activeCard[data-status="Not Started"]:hover {
+  transform: translateY(-2px);
+  border-left-color: var(--primary);
+}
+
+.activeCard[data-status="In Progress"] {
+  border-left-color: var(--primary);
+  box-shadow: 0 8px 24px rgba(129, 92, 249, 0.18);
+}
+
+.activeCard[data-status="In Progress"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(129, 92, 249, 0.25);
+}
+
+.activeCard[data-status="Completed"] {
+  border-left-color: var(--success);
+  opacity: 0.95;
+}
+
+.activeCard[data-status="Completed"]:hover {
+  transform: translateY(-2px);
+}
+
+/* ─── Card Header ──────────────────────────────────────────── */
+.activeCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.categoryBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.durationBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(95, 224, 192, 0.1);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ─── Card Title ────────────────────────────────────────────── */
+.activeCardTitle {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.3;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── Lore Snippet ────────────────────────────────────────── */
+.loreSnippet {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── Step Stats ────────────────────────────────────────────── */
+.stepStats {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.statItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.statLabel {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   font-weight: 700;
 }
 
-.stepFooter {
-  display: flex;
-  justify-content: space-between;
-  color: var(--muted);
+.statValue {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
 }
+
+/* ─── Start Button ────────────────────────────────────────── */
+.startButton {
+  width: 100%;
+  padding: 12px 16px;
+  margin-top: auto;
+  position: relative;
+  z-index: 1;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* ─── Empty State ──────────────────────────────────────────── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.emptyIcon {
+  font-size: 48px;
+}
+
 
 .weekHeader {
   display: flex;
@@ -72,4 +359,104 @@
 .day {
   font-weight: 700;
   font-size: 16px;
+}
+
+/* ─── Song Selector (inline card expansion) ─────────────────── */
+.songSelector {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 10px;
+  background: rgba(0, 229, 204, 0.05);
+  border: 1px solid rgba(0, 229, 204, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.selectorLabel {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+
+.selectorTabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tabBtn {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tabBtn:hover {
+  border-color: var(--primary-soft);
+  color: var(--text);
+}
+
+.tabActive {
+  background: rgba(129, 92, 249, 0.15);
+  border-color: var(--primary-soft);
+  color: var(--primary-soft);
+}
+
+.songSelect,
+.songInput {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.songSelect:focus,
+.songInput:focus {
+  outline: none;
+  border-color: var(--primary-soft);
+}
+
+.songSelect option {
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.selectorHint {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.selectorError {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(255, 80, 80, 0.1);
+  border: 1px solid rgba(255, 80, 80, 0.3);
+  color: #ff6b6b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.launchBtn {
+  width: 100%;
+  padding: 10px 16px;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.02em;
 }
