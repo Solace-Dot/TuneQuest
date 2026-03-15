@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { Container, Row, Col } from "react-bootstrap";
-import { loginSuccess, setError as setAuthError } from "../redux/slices/authSlice";
+import { loginSuccess, setError as setAuthError, setSubscription } from "../redux/slices/authSlice";
 import { setInstrument, setSkillLevel, setProfileCompletion } from "../redux/slices/profileSlice";
 import { fetchProfileWithToken, loginUser } from "../api/client";
 import api from "../api/client";
@@ -30,21 +30,22 @@ function LoginPage() {
 
       const user = await fetchProfileWithToken(token);
       
-      // Fetch subscription status from backend
-      let subscription = "free";
+      // Save token to localStorage and Redux first (so interceptor can use it)
+      dispatch(loginSuccess({ token, user, subscription: "free" }));
+      
+      // NOW fetch actual subscription status (token is in localStorage, interceptor will add it)
+      let actualSubscription = "free";
       try {
         const subRes = await api.get('/api/payments/subscription/status/');
         if (subRes.data?.subscription === 'premium') {
-          subscription = 'premium';
+          actualSubscription = 'premium';
+          // Update Redux with actual subscription
+          dispatch(setSubscription('premium'));
         }
       } catch (err) {
-        // Default to free tier if fetch fails
-        console.log('Could not fetch subscription status, defaulting to free tier');
+        console.log('Could not fetch subscription status, using free tier default');
       }
       
-      dispatch(loginSuccess({ token, user, subscription }));
-      
-      // Restore profile data from the user object
       if (user?.profile) {
         if (user.profile.instrument_name) {
           dispatch(setInstrument(user.profile.instrument_name));

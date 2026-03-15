@@ -124,20 +124,20 @@ function PracticePlanPage() {
     };
   }
 
-  // Fetch remaining plan regenerations on mount
+  // Fetch remaining plan regenerations on mount and when subscription changes
   React.useEffect(() => {
     const fetchRemaining = async () => {
       try {
-        // For free tier: 3 max per month, for premium: unlimited
         if (subscription === 'premium') {
           setRemainingRegens(null); // null means unlimited
         } else {
-          // Fetch from backend (once API endpoint exists)
-          setRemainingRegens(3); // Default to 3 for now
+          // Fetch actual count from backend for free tier
+          const res = await api.get('/api/exercises/plans/regen-count/');
+          setRemainingRegens(res.data.regenerations_remaining);
         }
       } catch (err) {
         console.error('Failed to fetch regeneration count:', err);
-        setRemainingRegens(3);
+        setRemainingRegens(3); // Default fallback
       }
     };
     fetchRemaining();

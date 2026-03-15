@@ -21,6 +21,9 @@ class Lesson(models.Model):
     A single learn-page lesson card. `slug` (e.g. "l-001") is the primary key
     so the frontend IDs are stable and seedable by management command.
     `content` is a list of block dicts understood by the frontend renderer.
+    
+    If `user` is None: global lesson (template created by admin)
+    If `user` is set: AI-generated lesson for that specific user only
     """
     slug = models.SlugField(primary_key=True, max_length=20)
     title = models.CharField(max_length=255)
@@ -30,11 +33,20 @@ class Lesson(models.Model):
     description = models.TextField()
     content = models.JSONField(default=list)
     order = models.PositiveSmallIntegerField(default=0)
+    user = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.CASCADE,
+        related_name='ai_lessons',
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         ordering = ['order']
 
     def __str__(self):
+        if self.user:
+            return f"[{self.slug}] {self.title} (AI for {self.user.username})"
         return f"[{self.slug}] {self.title}"
 
 

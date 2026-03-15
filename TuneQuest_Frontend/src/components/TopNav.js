@@ -66,7 +66,7 @@ function TopNav() {
     { to: "/dashboard", label: "Dashboard", auth: true },
     { to: "/plan", label: "Plan Tracker", auth: true },
     { to: "/exercises", label: "Exercises", auth: true },
-    { to: "/learn", label: "Learn", auth: true },
+    { to: "/learn", label: "Lessons", auth: true },
     { to: "/progress", label: "Progress", auth: true, premiumOnly: true },
     { to: "/game", label: "Practice Area", auth: true },
   ];

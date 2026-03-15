@@ -189,12 +189,13 @@ class ProfileCompletionView(APIView):
     
     def post(self, request):
         """Save or update profile completion status."""
-        from .models import ProfileCompletion
+        from .models import ProfileCompletion, UserProfile
         from django.utils import timezone
         
         is_completed = request.data.get('is_completed', False)
         instrument_name = request.data.get('instrument_name', '')
         skill_level = request.data.get('skill_level', '')
+        learning_goal = request.data.get('learning_goal', '')
         
         profile_completion, created = ProfileCompletion.objects.get_or_create(user=request.user)
         
@@ -207,6 +208,14 @@ class ProfileCompletionView(APIView):
             profile_completion.completed_at = timezone.now()
         
         profile_completion.save()
+        
+        # Also update UserProfile so data persists when user logs back in
+        user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        user_profile.instrument_name = instrument_name
+        user_profile.skill_level = skill_level
+        if learning_goal:
+            user_profile.learning_goal_text = learning_goal
+        user_profile.save()
         
         return Response({
             'success': True,

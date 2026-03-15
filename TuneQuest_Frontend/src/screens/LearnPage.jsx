@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import api from "../api/client";
 import { Container, Row, Col } from "react-bootstrap";
@@ -169,16 +169,55 @@ function LearnPage() {
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const [clearConfirm, setClearConfirm] = useState(false);
+  const [clearLoading, setClearLoading] = useState(false);
+  const fetchIdRef = useRef(0); // Track which fetch is active
+  
   const recommendedSlugs = useSelector((state) => state.aiPlan.recommendedLessonSlugs);
+  const token = useSelector((state) => state.auth.token);
+  const dailyPlanId = useSelector((state) => state.aiPlan.dailyPlanId);
   const hasRecommendations = recommendedSlugs.length > 0;
 
+  // CRITICAL: When token OR plan changes, clear lessons and fetch fresh data
   useEffect(() => {
-    api
-      .get("/api/learn/lessons/")
-      .then((res) => setLessons(res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    // IMMEDIATELY and COMPLETELY clear all lessons
+    setLessons([]);
+    setOpenLesson(null);
+    setLoading(true);
+    
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    
+    // Increment fetch ID so old requests are ignored
+    fetchIdRef.current += 1;
+    const currentFetchId = fetchIdRef.current;
+    
+    // WAIT a tiny bit to ensure state reset completes
+    const timer = setTimeout(() => {
+      api
+        .get("/api/learn/lessons/")
+        .then((res) => {
+          // ONLY set if this is still the current fetch
+          if (currentFetchId === fetchIdRef.current) {
+            setLessons(Array.isArray(res.data) ? res.data : []);
+          }
+        })
+        .catch(() => {
+          if (currentFetchId === fetchIdRef.current) {
+            setLessons([]);
+          }
+        })
+        .finally(() => {
+          if (currentFetchId === fetchIdRef.current) {
+            setLoading(false);
+          }
+        });
+    }, 0); // Minimal delay to let state updates flush
+    
+    return () => clearTimeout(timer);
+  }, [token, dailyPlanId]);
 
   const completedIds = new Set(
     lessons.filter((l) => l.is_completed).map((l) => l.slug)
@@ -211,6 +250,35 @@ function LearnPage() {
     }
   }
 
+  async function handleClearLessons() {
+    setClearLoading(true);
+    try {
+      const res = await api.post("/api/learn/lessons/clear_ai_lessons/");
+      console.log("Clear response:", res.data);
+      
+      // Immediately clear state
+      setLessons([]);
+      setOpenLesson(null);
+      setClearConfirm(false);
+      
+      // Force a fresh fetch from the backend
+      setTimeout(async () => {
+        try {
+          const refreshRes = await api.get("/api/learn/lessons/");
+          console.log("Refreshed lessons after clear:", refreshRes.data?.length || 0);
+          setLessons(Array.isArray(refreshRes.data) ? refreshRes.data : []);
+        } catch (err) {
+          console.error("Failed to refresh lessons after clear:", err);
+        } finally {
+          setClearLoading(false);
+        }
+      }, 500);
+    } catch (err) {
+      console.error("Failed to clear lessons:", err);
+      setClearLoading(false);
+    }
+  }
+
   const totalCompleted = completedIds.size;
   const totalLessons = lessons.length;
 
@@ -221,22 +289,134 @@ function LearnPage() {
         {/* Header */}
         <div className={styles.pageHeader}>
           <div>
-            <h2 className={styles.pageTitle}>Learn</h2>
+            <h2 className={styles.pageTitle}>Learn!</h2>
             <p className={styles.pageSubtitle}>
               Bite-sized music theory lessons — from basics to intermediate concepts.
             </p>
           </div>
-          <div className={styles.progressPill}>
-            <span className={styles.progressCount}>{totalCompleted}/{totalLessons}</span>
-            <span className={styles.progressLabel}>lessons done</span>
-            <div className={styles.miniBar}>
-              <div
-                className={styles.miniBarFill}
-                style={{ width: `${(totalCompleted / totalLessons) * 100}%` }}
-              />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {lessons.length > 0 && (
+              <button
+                onClick={() => setClearConfirm(true)}
+                disabled={clearLoading}
+                style={{
+                  padding: '8px 14px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                  color: '#ef4444',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  borderRadius: '6px',
+                  cursor: clearLoading ? 'not-allowed' : 'pointer',
+                  opacity: clearLoading ? 0.6 : 1,
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap',
+                }}
+                onMouseEnter={(e) => !clearLoading && (e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.25)')}
+                onMouseLeave={(e) => (e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.15)')}
+                title="Clear all AI-generated learning cards"
+              >
+                🗑️ Clear All
+              </button>
+            )}
+            <div className={styles.progressPill}>
+              <span className={styles.progressCount}>{totalCompleted}/{totalLessons}</span>
+              <span className={styles.progressLabel}>lessons done</span>
+              <div className={styles.miniBar}>
+                <div
+                  className={styles.miniBarFill}
+                  style={{ width: `${(totalCompleted / totalLessons) * 100}%` }}
+                />
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Clear Confirmation Modal */}
+        {clearConfirm && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10000,
+            }}
+            onClick={() => !clearLoading && setClearConfirm(false)}
+          >
+            <div
+              style={{
+                backgroundColor: '#1a1a2e',
+                borderRadius: '12px',
+                padding: '30px',
+                maxWidth: '400px',
+                width: '90%',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '2.5em', marginBottom: '12px' }}>🗑️</div>
+                <h3 style={{ fontSize: '1.3em', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--text)' }}>
+                  Clear All Learning Cards?
+                </h3>
+                <p style={{ margin: '0', fontSize: '0.95em', color: 'var(--text-secondary)' }}>
+                  This will delete all {lessons.length} AI-generated learning cards. You can regenerate your practice plan to get new ones.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => !clearLoading && setClearConfirm(false)}
+                  disabled={clearLoading}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    fontSize: '0.95em',
+                    fontWeight: '500',
+                    backgroundColor: 'transparent',
+                    color: 'var(--text)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    cursor: clearLoading ? 'not-allowed' : 'pointer',
+                    opacity: clearLoading ? 0.6 : 1,
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => !clearLoading && (e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.05)')}
+                  onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
+                >
+                  Keep Cards
+                </button>
+                <button
+                  onClick={handleClearLessons}
+                  disabled={clearLoading}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    fontSize: '0.95em',
+                    fontWeight: '600',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: '1px solid #ef4444',
+                    borderRadius: '6px',
+                    cursor: clearLoading ? 'not-allowed' : 'pointer',
+                    opacity: clearLoading ? 0.7 : 1,
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => !clearLoading && (e.target.style.backgroundColor = '#dc2626')}
+                  onMouseLeave={(e) => (e.target.style.backgroundColor = '#ef4444')}
+                >
+                  {clearLoading ? 'Clearing...' : 'Yes, Clear All'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Recommended for Your Practice Plan */}
         {!loading && hasRecommendations && (

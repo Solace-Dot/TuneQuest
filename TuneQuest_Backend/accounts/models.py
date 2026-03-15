@@ -7,6 +7,8 @@ class User(AbstractUser):
     is_locked = models.BooleanField(default=False)
     locked_until = models.DateTimeField(null=True, blank=True)
     last_token_refresh_date = models.DateField(null=True, blank=True, help_text="Last date (PT) when token was refreshed at midnight")
+    is_premium = models.BooleanField(default=False, help_text="Whether user has active premium subscription")
+    premium_end_date = models.DateTimeField(null=True, blank=True, help_text="When premium access ends")
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]

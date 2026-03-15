@@ -179,7 +179,7 @@ def cancel_subscription(request):
             user=request.user,
             plan_type='premium',
             subscription_status='active'
-        ).first()
+        ).order_by('-id').first()  # Get most recent subscription
         
         if not subscription:
             return Response({
@@ -190,7 +190,21 @@ def cancel_subscription(request):
         subscription.subscription_status = 'cancelled'
         subscription.save()
         
+        # Reset user premium status
+        request.user.is_premium = False
+        request.user.premium_end_date = None
+        request.user.save(update_fields=['is_premium', 'premium_end_date'])
+        
+        # Reset tokens back to free tier (keep tokens_remaining but cap tokens_limit at 10)
+        token_obj = request.user.ai_token
+        if token_obj:
+            # When downgrading, keep tokens_remaining but cap at free tier limit
+            token_obj.tokens_remaining = min(token_obj.tokens_remaining, 10)
+            token_obj.tokens_limit = 10
+            token_obj.save()
+        
         logger.info(f"Subscription cancelled for user {request.user.id}")
+        logger.info(f"User {request.user.id} downgraded to free tier, tokens reset")
         
         return Response({
             'detail': 'Your Premium subscription has been cancelled. Access will continue until the end of your billing period.',
@@ -208,18 +222,30 @@ def cancel_subscription(request):
 def get_subscription_status(request):
     """Fetch current subscription status for authenticated user."""
     try:
-        # Get the most recent active premium subscription
-        subscription = Subscription.objects.filter(
-            user=request.user,
-            plan_type='premium',
-            subscription_status='active'
-        ).order_by('-id').first()  # Get most recent by ID
-        
-        if subscription and subscription.is_active:
+        # Check User.is_premium field directly (source of truth)
+        if request.user.is_premium:
+            # Verify premium hasn't expired
+            from django.utils import timezone
+            now = timezone.now()
+            if request.user.premium_end_date and now >= request.user.premium_end_date:
+                # Premium has expired, mark as free
+                request.user.is_premium = False
+                request.user.save(update_fields=['is_premium'])
+                return Response({
+                    'subscription': 'free',
+                    'end_date': None,
+                    'days_remaining': None,
+                    'is_active': False,
+                })
+            
+            # Premium is active
+            from datetime import timedelta as td
+            days_remaining = (request.user.premium_end_date - now).days if request.user.premium_end_date else 0
+            
             return Response({
                 'subscription': 'premium',
-                'end_date': subscription.end_date,
-                'days_remaining': subscription.days_remaining,
+                'end_date': request.user.premium_end_date,
+                'days_remaining': days_remaining,
                 'is_active': True,
             })
         else:
@@ -432,7 +458,13 @@ class PayPalCaptureOrderView(APIView):
                     token_obj.save()
                     tokens_remaining = token_obj.tokens_remaining
                     
+                    # Update User model: mark as premium
+                    request.user.is_premium = True
+                    request.user.premium_end_date = end_date
+                    request.user.save(update_fields=['is_premium', 'premium_end_date'])
+                    
                     logger.info(f"Premium tokens upgraded for user {request.user.id}: {token_obj.tokens_remaining}/50")
+                    logger.info(f"User {request.user.id} marked as premium until {end_date}")
 
                 logger.info(f"Payment processed: {capture_id} for user {request.user.id}, status: {capture_status}")
 

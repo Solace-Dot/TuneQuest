@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useSelector, useDispatch } from 'react-redux';
 import { deleteAccount } from '../services/api';
 import { logout, setSubscription } from '../redux/slices/authSlice';
-import { clearPlan } from '../redux/slices/aiPlanSlice';
+import { clearPlan, setTokens } from '../redux/slices/aiPlanSlice';
 import { clearProfile } from '../redux/slices/profileSlice';
 import { BACKGROUND_OPTIONS } from '../backgrounds/BackgroundManager';
 import api from '../api/client';
@@ -64,7 +64,6 @@ function Section({ icon, title, children }) {
   return (
     <div className={styles.section}>
       <div className={styles.sectionHeader}>
-        <span className={styles.sectionIcon}>{icon}</span>
         <h3 className={styles.sectionTitle}>{title}</h3>
       </div>
       <div className={styles.sectionBody}>{children}</div>
@@ -137,6 +136,7 @@ function SettingsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [cancelConfirm, setCancelConfirm] = useState(false);
   const [premiumEndDate, setPremiumEndDate] = useState(null);
   const [daysRemaining, setDaysRemaining] = useState(null);
   const [cancelLoading, setCancelLoading] = useState(false);
@@ -226,22 +226,42 @@ function SettingsPage() {
     }
   };
 
-  const handleCancelPremium = async () => {
+  const handleCancelPremium = () => {
+    // Step 1: Show confirmation dialog
+    setCancelConfirm(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    // Step 2: Actually cancel after user confirms
     setCancelLoading(true);
     setCancelError('');
     try {
       // Call backend to cancel subscription
       await api.post('/api/payments/subscription/cancel/');
+      
       // Update subscription status to free
       dispatch(setSubscription('free'));
       setPremiumEndDate(null);
       setDaysRemaining(null);
+      setCancelConfirm(false);
+      
+      // Fetch updated token balance (should be capped at 10 now)
+      const tokenRes = await api.get('/api/ai/tokens/');
+      dispatch(setTokens({
+        tokensRemaining: tokenRes.data.tokens_remaining,
+        tokensLimit: tokenRes.data.tokens_limit
+      }));
     } catch (err) {
       const msg = err.response?.data?.detail || "Failed to cancel subscription. Please try again.";
       setCancelError(msg);
     } finally {
       setCancelLoading(false);
     }
+  };
+
+  const handleCancelDismiss = () => {
+    setCancelConfirm(false);
+    setCancelError('');
   };
 
   return (
@@ -326,48 +346,169 @@ function SettingsPage() {
 
           {/* ── Premium Tier ── */}
           {subscription === 'premium' && (
-            <Section icon="👑" title="Premium Tier">
-              <Row label="Status" description="Your current subscription status">
-                <span style={{ color: 'var(--primary)', fontWeight: '600' }}>Active</span>
-              </Row>
-              {premiumEndDate && (
-                <>
-                  <Row label="Expires On" description="Your Premium access will end on this date">
-                    <span>{premiumEndDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                  </Row>
-                  {daysRemaining !== null && (
-                    <Row label="Days Remaining" description="Time left on your current subscription">
-                      <span>{daysRemaining} day{daysRemaining !== 1 ? 's' : ''}</span>
+            <>
+              <Section icon="👑" title="Premium Tier">
+                <Row label="Status" description="Your current subscription status">
+                  <span style={{ color: 'var(--primary)', fontWeight: '600' }}>Active</span>
+                </Row>
+                {premiumEndDate && (
+                  <>
+                    <Row label="Expires On" description="Your Premium access will end on this date">
+                      <span>{premiumEndDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                     </Row>
-                  )}
-                </>
-              )}
-              {cancelError && (
-                <div style={{ 
-                  color: 'var(--danger)',
-                  fontSize: '0.9em', 
-                  marginBottom: '10px',
-                  padding: '8px 12px',
-                  backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(220, 38, 38, 0.3)'
-                }}>
-                  {cancelError}
+                    {daysRemaining !== null && (
+                      <Row label="Days Remaining" description="Time left on your current subscription">
+                        <span>{daysRemaining} day{daysRemaining !== 1 ? 's' : ''}</span>
+                      </Row>
+                    )}
+                  </>
+                )}
+                {cancelError && (
+                  <div style={{ 
+                    color: 'var(--danger)',
+                    fontSize: '0.9em', 
+                    marginBottom: '10px',
+                    padding: '8px 12px',
+                    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(220, 38, 38, 0.3)'
+                  }}>
+                    {cancelError}
+                  </div>
+                )}
+                <Row label="Cancel Subscription" description="End your Premium tier subscription">
+                  <button 
+                    onClick={handleCancelPremium}
+                    className={styles.resetBtn}
+                    disabled={cancelLoading}
+                  >
+                    End Premium Tier
+                  </button>
+                </Row>
+              </Section>
+
+              {cancelConfirm && (
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10000,
+                  }}
+                  onClick={handleCancelDismiss}
+                >
+                  <div
+                    style={{
+                      backgroundColor: '#1a1a2e',
+                      borderRadius: '12px',
+                      padding: '30px',
+                      maxWidth: '450px',
+                      width: '90%',
+                      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div style={{ marginBottom: '20px' }}>
+                      <div style={{ fontSize: '2.5em', marginBottom: '12px' }}>⚠️</div>
+                      <h3 style={{ fontSize: '1.3em', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--text)' }}>
+                        Cancel Premium Subscription?
+                      </h3>
+                      <p style={{ margin: '0', fontSize: '0.95em', color: 'var(--text-secondary)' }}>
+                        This action cannot be undone. You'll lose access to premium features and your token limit will drop to 10 per month.
+                      </p>
+                    </div>
+
+                    {cancelError && (
+                      <div
+                        style={{
+                          color: 'var(--danger)',
+                          fontSize: '0.9em',
+                          marginBottom: '16px',
+                          padding: '10px 12px',
+                          backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                          borderRadius: '6px',
+                          border: '1px solid rgba(220, 38, 38, 0.3)',
+                        }}
+                      >
+                        {cancelError}
+                      </div>
+                    )}
+
+                    <div
+                      style={{
+                        backgroundColor: 'rgba(255, 101, 132, 0.1)',
+                        padding: '12px',
+                        borderRadius: '6px',
+                        marginBottom: '20px',
+                        fontSize: '0.85em',
+                        color: 'var(--text-secondary)',
+                      }}
+                    >
+                      <strong>What you'll lose:</strong>
+                      <ul style={{ margin: '6px 0 0 0', paddingLeft: '16px' }}>
+                        <li>Unlimited AI regenerations</li>
+                        <li>Higher AI token monthly allowance</li>
+                        <li>Premium AI features</li>
+                      </ul>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button
+                        onClick={handleCancelDismiss}
+                        disabled={cancelLoading}
+                        style={{
+                          flex: 1,
+                          padding: '12px 16px',
+                          fontSize: '0.95em',
+                          fontWeight: '500',
+                          backgroundColor: 'transparent',
+                          color: 'var(--text)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '6px',
+                          cursor: cancelLoading ? 'not-allowed' : 'pointer',
+                          opacity: cancelLoading ? 0.6 : 1,
+                          transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={(e) => !cancelLoading && (e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.05)')}
+                        onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
+                      >
+                        Keep Premium
+                      </button>
+                      <button
+                        onClick={handleConfirmCancel}
+                        disabled={cancelLoading}
+                        style={{
+                          flex: 1,
+                          padding: '12px 16px',
+                          fontSize: '0.95em',
+                          fontWeight: '600',
+                          backgroundColor: 'var(--danger)',
+                          color: 'white',
+                          border: '1px solid var(--danger)',
+                          borderRadius: '6px',
+                          cursor: cancelLoading ? 'not-allowed' : 'pointer',
+                          opacity: cancelLoading ? 0.7 : 1,
+                          transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={(e) => !cancelLoading && (e.target.style.backgroundColor = 'rgba(220, 38, 38, 0.9)')}
+                        onMouseLeave={(e) => (e.target.style.backgroundColor = 'var(--danger)')}
+                      >
+                        {cancelLoading ? 'Canceling...' : 'Yes, Cancel Premium'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
-              <Row label="Cancel Subscription" description="End your Premium tier subscription">
-                <button 
-                  onClick={handleCancelPremium} 
-                  className={styles.resetBtn}
-                  disabled={cancelLoading}
-                >
-                  {cancelLoading ? 'Canceling...' : 'End Premium Tier'}
-                </button>
-              </Row>
-            </Section>
+            </>
           )}
 
-          {/* ── Account ── */}
           <Section icon="👤" title="Account">
             <Row label="Profile Settings" description="Update your username, instrument, and goals">
               <Link to="/profile" className={styles.linkBtn}>Go to Profile →</Link>

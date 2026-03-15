@@ -197,3 +197,43 @@ class DailyPlanViewSet(viewsets.ModelViewSet):
         data['recommended_lesson_slugs'] = plan.recommended_lesson_slugs
         return Response(data)
 
+    @action(detail=False, methods=['get'], url_path='regen-count')
+    def regen_count(self, request):
+        """Get remaining plan regenerations for free tier users.
+        Returns: { 'plans_this_month': int, 'regenerations_remaining': int }
+        Premium users always have unlimited (None).
+        """
+        from payments.models import Subscription
+        from django.utils import timezone
+        
+        # Check if user is premium
+        subscription = Subscription.objects.filter(
+            user=request.user,
+            plan_type='premium',
+            subscription_status='active'
+        ).order_by('-id').first()
+        
+        is_premium = subscription and subscription.is_active if subscription else False
+        
+        if is_premium:
+            return Response({
+                'is_premium': True,
+                'regenerations_remaining': None,
+                'plans_this_month': None,
+            })
+        
+        # Count plans created this month for free tier
+        current_month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        plans_this_month = DailyPlan.objects.filter(
+            user=request.user,
+            created_at__gte=current_month_start
+        ).count()
+        
+        regenerations_remaining = max(0, 3 - plans_this_month)
+        
+        return Response({
+            'is_premium': False,
+            'regenerations_remaining': regenerations_remaining,
+            'plans_this_month': plans_this_month,
+        })
+

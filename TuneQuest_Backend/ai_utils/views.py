@@ -7,28 +7,34 @@ import json
 from ai_utils.quiz_generator import QuizGenerator
 from ai_utils.practice_plan_generator import PracticePlanGenerator
 from ai_utils.models import AIToken, AIGeneratedQuiz, AIQuizQuestion, AIGeneratedSong, AITimelineEvent
-from learn.models import Lesson
+from learn.models import Lesson, LessonProgress
 from exercises.models import DailyPlan
+from payments.models import Subscription
 
 TOKEN_LIMIT_FREE = 10
 TOKEN_LIMIT_PREMIUM = 50
 
 
 def _get_token_limit_for_user(user):
-    """Determine token limit based on subscription status."""
+    """Determine token limit based on premium subscription status stored in User model."""
     if not user.is_authenticated:
         return TOKEN_LIMIT_FREE
     
-    from payments.models import Subscription
+    # Check User.is_premium field directly (source of truth, no query needed)
+    if user.is_premium:
+        # Verify premium hasn't expired
+        if user.premium_end_date:
+            from django.utils import timezone
+            now = timezone.now()
+            if now >= user.premium_end_date:
+                # Premium expired, downgrade
+                user.is_premium = False
+                user.save(update_fields=['is_premium'])
+                return TOKEN_LIMIT_FREE
+        
+        return TOKEN_LIMIT_PREMIUM
     
-    subscription = Subscription.objects.filter(
-        user=user,
-        plan_type='premium',
-        subscription_status='active'
-    ).first()
-    
-    is_premium = subscription and subscription.is_active if subscription else False
-    return TOKEN_LIMIT_PREMIUM if is_premium else TOKEN_LIMIT_FREE
+    return TOKEN_LIMIT_FREE
 
 
 def _build_ear_training_questions(num_questions=5):
@@ -110,14 +116,54 @@ def _recommended_slugs(plan: dict, skill_level: str) -> list:
     return slugs
 
 
-def _create_learning_cards_from_plan(plan: dict, skill_level: str, instrument: str) -> list:
-    """Generate and create at least 10 learning cards based on the practice plan."""
+def _create_learning_cards_from_plan(plan: dict, skill_level: str, instrument: str, user) -> list:
+    """
+    Generate and create AI-learning cards for this specific user based on the practice plan.
+    
+    CARDS MATCH PLAN CATEGORIES:
+    - FREE TIER: Max 5 cards (max 1 per category from plan)
+    - PREMIUM TIER: Max 10 cards (max 3 per category from plan)
+    
+    CRITICAL: Deletes user's old AI-generated lessons first, then creates new ones.
+    This ensures lessons don't accumulate across plan regenerations.
+    """
     import uuid
+    
+    # CLEAR old AI-generated lessons for this user BEFORE creating new ones
+    old_lessons_qs = Lesson.objects.filter(user=user)
+    deleted_count = old_lessons_qs.count()
+    
+    # Clear associated progress first
+    LessonProgress.objects.filter(lesson__in=old_lessons_qs).delete()
+    
+    # Then delete the lessons
+    old_lessons_qs.delete()
+    print(f"[CLEAR] Deleted {deleted_count} old lessons for user {user.id}")
+    
+    # Determine if user is premium
+    subscription = Subscription.objects.filter(
+        user=user,
+        plan_type='premium',
+        subscription_status='active'
+    ).order_by('-id').first()
+    
+    is_premium = subscription and subscription.is_active if subscription else False
+    max_cards = 10 if is_premium else 5
+    max_per_category = 3 if is_premium else 1
+    print(f"[CARD GEN] User {user.id} is {'PREMIUM' if is_premium else 'FREE'} - Max {max_cards} cards (max {max_per_category} per category)")
+    
+    # Get the categories from the practice plan
+    plan_categories = set()
+    for step in plan.get('steps', []):
+        cat = step.get('category', '').strip()
+        if cat:
+            plan_categories.add(cat)
+    print(f"[CARD GEN] Plan categories: {plan_categories}")
+    
     created_slugs = []
     step_count = 0
-    
-    # Get existing lessons to avoid duplicates
-    existing_lessons = set(Lesson.objects.values_list('slug', flat=True))
+    category_counts = {cat: 0 for cat in plan_categories}  # Track cards per category
+    used_topics = set()  # Track topics we've used to avoid duplicates
     
     # Define learning objectives per category
     category_topics = {
@@ -145,112 +191,75 @@ def _create_learning_cards_from_plan(plan: dict, skill_level: str, instrument: s
             'Interval Recognition', 'Chord Quality Identification', 'Melodic Dictation',
             'Rhythmic Dictation', 'Scale Identification', 'Perfect Pitch Training',
             'Relative Pitch Development', 'Harmonic Ear Training', 'Note Recognition by Sound', 'Chord Progression Ear'
+        ],
+        'Quizzes': [
+            'Music Theory Quiz', 'Scale Recognition Quiz', 'Chord Identification Quiz',
+            'Interval Ear Training', 'Rhythm Recognition', 'Music History Quiz'
         ]
     }
     
-    # Create learning cards for each step in the plan
-    for idx, step in enumerate(plan.get('steps', [])[:10]):  # Max 10 cards from plan steps
-        category = step.get('category', 'Knowledge')
-        title = step.get('title', f'Lesson {idx + 1}')
-        description = step.get('description', '')
-        duration = step.get('duration_minutes', 15)
+    # Helper function to create a lesson
+    def create_lesson_from_topic(topic, category):
+        nonlocal step_count
+        if step_count >= max_cards:
+            return None
         
-        # Determine difficulty
+        # Check category limit
+        if category_counts.get(category, 0) >= max_per_category:
+            return None
+        
+        # Ensure we don't duplicate topics
+        if topic in used_topics:
+            return None
+        
         difficulty = skill_level if skill_level in ['Beginner', 'Intermediate', 'Advanced'] else 'Beginner'
-        
-        # Create slug
         unique_id = str(uuid.uuid4())[:8]
-        slug = f"ai-{category.lower().replace(' ', '-')}-{idx}-{unique_id}"[:20]
+        slug = f"ai-{category.lower().replace(' ', '-')}-{step_count}-{unique_id}"[:25]
         
-        # Skip if exists
-        if slug in existing_lessons:
-            continue
-        
-        # Create lesson content blocks with frontend-compatible format
         content = [
-            {
-                'type': 'text',
-                'heading': 'Overview',
-                'body': description or f'Learn about {title.lower()} in {category.lower()}. This lesson covers essential concepts and practical applications for {instrument} players.'
-            },
-            {
-                'type': 'text',
-                'heading': 'Learning Objectives',
-                'body': f'By the end of this lesson, you will be able to:\n• Understand the fundamentals of {title.lower()}\n• Apply these concepts in practical scenarios\n• Practice and master the core techniques'
-            },
-            {
-                'type': 'tip',
-                'body': f'💡 Pro Tip: Start slowly and focus on accuracy before speed. Consistent practice of {title.lower()} will significantly improve your {instrument} playing skills.'
-            },
-            {
-                'type': 'text',
-                'heading': 'Key Points to Remember',
-                'body': '• Understanding the fundamentals is crucial\n• Practice regularly to build muscle memory\n• Apply techniques in real musical contexts\n• Don\'t rush—quality practice beats rushed sessions'
-            }
+            {'type': 'text', 'heading': 'Overview', 'body': f'Master {topic.lower()} for {instrument}. This AI-generated lesson provides structured learning and practice guidance.'},
+            {'type': 'text', 'heading': 'What You\'ll Learn', 'body': f'In this lesson, you will:\n• Understand the core concepts of {topic.lower()}\n• Develop practical skills through guided exercises\n• Apply these concepts to real musical situations\n• Build confidence and proficiency step by step'},
+            {'type': 'tip', 'body': f'🎯 Focus Area: This lesson emphasizes {topic.lower()} which is essential for {instrument} players at the {difficulty} level.'},
+            {'type': 'text', 'heading': 'Practice Tips', 'body': 'Break the lesson into small, manageable sections\nPractice each section until comfortable\nCombine sections into a complete practice routine\nReview regularly to reinforce learning'}
         ]
         
         try:
             lesson = Lesson.objects.create(
                 slug=slug,
-                title=title,
+                title=topic,
                 category=_map_category_to_lesson_category(category),
                 difficulty=difficulty,
-                duration_minutes=min(duration, 60),
-                description=description or f'An AI-generated lesson on {title.lower()}',
+                duration_minutes=20,
+                description=f'An AI-generated lesson on {topic.lower()}',
                 content=content,
-                order=step_count
+                order=step_count,
+                user=user
             )
             created_slugs.append(lesson.slug)
+            used_topics.add(topic)
             step_count += 1
+            category_counts[category] = category_counts.get(category, 0) + 1
+            print(f"[CARD GEN] Created card {step_count}/{max_cards}: {topic} in {category}")
+            return lesson
         except Exception as e:
             print(f"Error creating lesson {slug}: {e}")
+            return None
+    
+    # Fill cards from plan categories first
+    for category in plan_categories:
+        if category not in category_topics:
+            print(f"[CARD GEN] Skipping unknown category: {category}")
             continue
-    
-    # If we have fewer than 10 cards, add more from the category templates
-    while step_count < 10:
-        for category, topics in category_topics.items():
-            if step_count >= 10:
+        
+        # Add up to max_per_category cards from this category
+        for topic in category_topics[category]:
+            if step_count >= max_cards or category_counts[category] >= max_per_category:
                 break
-            
-            for topic in topics:
-                if step_count >= 10:
-                    break
-                
-                # Generate slug
-                unique_id = str(uuid.uuid4())[:8]
-                slug = f"ai-{category.lower().replace(' ', '-')}-{step_count}-{unique_id}"[:25]
-                
-                if slug in existing_lessons or slug in created_slugs:
-                    continue
-                
-                lesson_cat = _map_category_to_lesson_category(category)
-                difficulty = skill_level if skill_level in ['Beginner', 'Intermediate', 'Advanced'] else 'Beginner'
-                
-                content = [
-                    {'type': 'text', 'heading': 'Overview', 'body': f'Master {topic.lower()} for {instrument}. This AI-generated lesson provides structured learning and practice guidance.'},
-                    {'type': 'text', 'heading': 'What You\'ll Learn', 'body': f'In this lesson, you will:\n• Understand the core concepts of {topic.lower()}\n• Develop practical skills through guided exercises\n• Apply these concepts to real musical situations\n• Build confidence and proficiency step by step'},
-                    {'type': 'tip', 'body': f'🎯 Focus Area: This lesson emphasizes {topic.lower()} which is essential for {instrument} players at the {difficulty} level.'},
-                    {'type': 'text', 'heading': 'Practice Tips', 'body': 'Break the lesson into small, manageable sections\nPractice each section until comfortable\nCombine sections into a complete practice routine\nReview regularly to reinforce learning'}
-                ]
-                
-                try:
-                    lesson = Lesson.objects.create(
-                        slug=slug,
-                        title=topic,
-                        category=lesson_cat,
-                        difficulty=difficulty,
-                        duration_minutes=20,
-                        description=f'An AI-generated lesson on {topic.lower()}',
-                        content=content,
-                        order=step_count
-                    )
-                    created_slugs.append(lesson.slug)
-                    step_count += 1
-                except Exception as e:
-                    print(f"Error creating lesson {slug}: {e}")
-                    continue
+            create_lesson_from_topic(topic, category)
     
-    return created_slugs[:10]  # Return only first 10
+    print(f"[CARD GEN] Created {step_count} total cards for user {user.id} ({max_cards} max)")
+    print(f"[CARD GEN] Categories breakdown: {category_counts}")
+    return created_slugs
 
 
 def _map_category_to_lesson_category(category: str) -> str:
@@ -291,11 +300,19 @@ def generate_quiz(request):
             }, status=400)
             
     except Exception as e:
-        print(f"Quiz generation error: {str(e)}")
+        error_str = str(e)
+        print(f"Quiz generation error: {error_str}")
+        
+        if '429' in error_str or 'RESOURCE_EXHAUSTED' in error_str or 'quota' in error_str.lower():
+            print(f"[QUIZ GEN] API quota exceeded")
+            return JsonResponse({
+                'error': 'Out of api request'
+            }, status=429)
+        
         import traceback
         traceback.print_exc()
         return JsonResponse({
-            'error': f'Failed to process request: {str(e)}'
+            'error': f'Failed to process request: {error_str}'
         }, status=500)
 
 @api_view(['POST'])
@@ -564,20 +581,18 @@ def get_token_balance(request):
         })
     
     token_limit = _get_token_limit_for_user(request.user)
-    token_obj, _ = AIToken.objects.get_or_create(
+    token_obj, created = AIToken.objects.get_or_create(
         user=request.user,
         defaults={'tokens_remaining': token_limit, 'tokens_limit': token_limit},
     )
     
-    # If user's token limit has changed (e.g., upgraded to premium), update it
+    # If token limit has changed (e.g., upgraded to premium or cancelled), sync it
     if token_obj.tokens_limit != token_limit:
-        # If upgrading and tokens are at old limit, add the difference
-        if token_limit > token_obj.tokens_limit and token_obj.tokens_remaining == token_obj.tokens_limit:
-            token_obj.tokens_remaining += (token_limit - token_obj.tokens_limit)
-        # If downgrading and tokens exceed new limit, cap them at new limit
-        elif token_limit < token_obj.tokens_limit and token_obj.tokens_remaining > token_limit:
-            token_obj.tokens_remaining = token_limit
+        if token_limit == TOKEN_LIMIT_FREE:
+            # Downgrading from premium to free: cap tokens_remaining at 10
+            token_obj.tokens_remaining = min(token_obj.tokens_remaining, TOKEN_LIMIT_FREE)
         
+        # Update tokens_limit to match subscription status
         token_obj.tokens_limit = token_limit
         token_obj.save()
     
@@ -635,7 +650,7 @@ def chat_message(request):
         
         # Call Gemini with the user message
         response = generator.client.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-2.5-flash',
             contents=[
                 {
                     'role': 'user',
@@ -678,7 +693,7 @@ def generate_practice_plan(request):
         user=request.user,
         plan_type='premium',
         subscription_status='active'
-    ).first()
+    ).order_by('-id').first()
     
     is_premium = subscription and subscription.is_active if subscription else False
     
@@ -724,14 +739,49 @@ def generate_practice_plan(request):
         generator = PracticePlanGenerator()
         plan = generator.generate(practice_data)
 
+        # Use the is_premium from earlier check instead of querying again
+        max_steps_per_category = 3 if is_premium else 1
+        print(f"[PLAN GEN] User {request.user.id} is {'PREMIUM' if is_premium else 'FREE'} - Max {max_steps_per_category} steps per category")
+        
+        # LIMIT PLAN STEPS BY TIER: Max 1 per category (FREE) or 3 per category (PREMIUM)
+        if 'steps' in plan:
+            steps = plan['steps']
+            category_counts = {}
+            filtered_steps = []
+            
+            for step in steps:
+                category = step.get('category', 'Unknown')
+                current_count = category_counts.get(category, 0)
+                
+                if current_count < max_steps_per_category:
+                    filtered_steps.append(step)
+                    category_counts[category] = current_count + 1
+                else:
+                    print(f"[PLAN GEN] Removing step: {step.get('title', '')} from {category} (max {max_steps_per_category} per category)")
+            
+            plan['steps'] = filtered_steps
+            print(f"[PLAN GEN] Limited plan: {len(steps)} steps → {len(filtered_steps)} steps")
+
         # Derive recommended lessons from the plan
         skill_level = (
             practice_data.get('user_context', {}).get('skill_level', 'Beginner')
         )
         recommended_slugs = _recommended_slugs(plan, skill_level)
+        print(f"[PLAN GEN] Starting for user {request.user.id} - checking for old lessons...")
         
         # Create AI-generated learning cards based on the plan
-        ai_generated_learning_slugs = _create_learning_cards_from_plan(plan, skill_level, instrument)
+        ai_generated_learning_slugs = _create_learning_cards_from_plan(plan, skill_level, instrument, request.user)
+        print(f"[PLAN GEN] Created {len(ai_generated_learning_slugs)} AI learning cards for user {request.user.id}")
+        
+        # Verify the lessons were created correctly
+        user_lessons_count = Lesson.objects.filter(user=request.user).count()
+        print(f"[PLAN GEN] FINAL CHECK: User {request.user.id} now has {user_lessons_count} total lessons")
+        
+        if user_lessons_count > 20:
+            print(f"[PLAN GEN] ⚠️ WARNING: User {request.user.id} has {user_lessons_count} lessons (should be ~10)!")
+            # List them all for debugging
+            lesson_list = list(Lesson.objects.filter(user=request.user).values_list('slug', 'user_id')[:50])
+            print(f"[PLAN GEN] First 50 lessons: {lesson_list}")
 
         # Persist plan to DB so it survives page reloads
         focus_areas = practice_data.get('focus_areas', []) if isinstance(practice_data, dict) else []
@@ -761,7 +811,16 @@ def generate_practice_plan(request):
         })
 
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        error_str = str(e)
+        
+        # Check for Google API quota exceeded (429 error)
+        if '429' in error_str or 'RESOURCE_EXHAUSTED' in error_str or 'quota' in error_str.lower():
+            print(f"[PLAN GEN] API quota exceeded for user {request.user.id}")
+            return JsonResponse({
+                'error': 'Out of api request'
+            }, status=429)
+        
+        return JsonResponse({'error': error_str}, status=500)
 
 
 @api_view(['POST'])
@@ -862,9 +921,17 @@ def generate_song_timeline(request):
             **result,
         })
     except Exception as e:
+        error_str = str(e)
+        
+        if '429' in error_str or 'RESOURCE_EXHAUSTED' in error_str or 'quota' in error_str.lower():
+            print(f"[CHAT] API quota exceeded for user {request.user.id}")
+            return JsonResponse({
+                'error': 'Out of api request'
+            }, status=429)
+        
         import traceback
         traceback.print_exc()
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'error': error_str}, status=500)
 
 
 @api_view(['GET'])
