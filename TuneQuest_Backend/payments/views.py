@@ -309,10 +309,11 @@ class PayPalCaptureOrderView(APIView):
 
         # Create/update subscription and payment records atomically
         try:
+            from datetime import timedelta
+            from django.utils import timezone
+            from ai_utils.models import AIToken
+            
             with transaction.atomic():
-                from datetime import timedelta
-                from django.utils import timezone
-                
                 # Calculate end_date as 30 days from now
                 end_date = timezone.now() + timedelta(days=30)
                 
@@ -352,11 +353,9 @@ class PayPalCaptureOrderView(APIView):
 
                 # If payment is successful, upgrade AI tokens (add 40 to existing)
                 if capture_status == "COMPLETED":
-                    from ai_utils.models import AIToken
-                    
                     token_obj, _ = AIToken.objects.get_or_create(
                         user=request.user,
-                        defaults={'tokens_remaining': 50, 'tokens_limit': 50, 'tokens_used': 0},
+                        defaults={'tokens_remaining': 50, 'tokens_limit': 50},
                     )
                     
                     # If user was on free tier (limit=10), add 40 tokens
@@ -372,7 +371,7 @@ class PayPalCaptureOrderView(APIView):
                 logger.info(f"Payment processed: {capture_id} for user {request.user.id}, status: {capture_status}")
 
         except Exception as e:
-            logger.error(f"Database error during payment capture: {str(e)}")
+            logger.error(f"Database error during payment capture: {str(e)}", exc_info=True)
             return Response(
                 {"detail": "Payment captured but failed to update subscription. Please contact support."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,

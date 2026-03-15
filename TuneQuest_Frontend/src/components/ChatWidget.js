@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import api from '../api/client';
 import styles from '../styles/components/ChatWidget.module.css';
 
 const FAQ_ITEMS = [
@@ -18,6 +20,10 @@ const FAQ_ITEMS = [
   {
     question: 'What if I miss practice days?',
     answer: 'No problem. Resume with a shorter session and focus on one core skill to get momentum back quickly.',
+  },
+  {
+    question: 'How many tokens does each action use?',
+    answer: 'Each AI action uses 1 token: chat messages, practice plans, quizzes, song generation, and progress summaries. Free tier gets 10/month, Premium gets 50/month.',
   },
 ];
 
@@ -53,24 +59,78 @@ const ChatTeaser = ({ onOpen, onClose }) => (
 // 3. The Full Chat Window
 const ChatWindow = ({ onClose, activeTab, setActiveTab }) => {
   const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState([
+    { type: 'bot', text: 'Hey there! Ready to practice today?' }
+  ]);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { token } = useSelector((state) => state.auth);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSendMessage = async () => {
+    if (!message.trim()) return;
+    if (!token) {
+      setMessages((prev) => [...prev, { type: 'bot', text: 'Please log in to use chat.' }]);
+      return;
+    }
+
+    // Add user message
+    const userMsg = message;
+    setMessages((prev) => [...prev, { type: 'user', text: userMsg }]);
+    setMessage('');
+    setLoading(true);
+
+    try {
+      // Call backend chat API
+      const response = await api.post('/api/ai/chat/', {
+        message: userMsg,
+      });
+
+      // Add AI response
+      setMessages((prev) => [...prev, { type: 'bot', text: response.data.response }]);
+    } catch (err) {
+      const errMsg = err.response?.data?.error || 'Failed to get response. Please try again.';
+      setMessages((prev) => [...prev, { type: 'bot', text: errMsg }]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePlanClick = () => {
+    onClose();
     navigate('/plan/form');
   };
 
   const handleProgressClick = () => {
+    onClose();
     navigate('/progress');
   };
 
   const handleExercisesClick = () => {
+    onClose();
     navigate('/exercises');
   };
 
   const handleQuizClick = () => {
+    onClose();
     navigate('/quiz');
   };
 
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
 
   return (
     <div className={styles.window}>
@@ -90,7 +150,7 @@ const ChatWindow = ({ onClose, activeTab, setActiveTab }) => {
           >
             FAQs
           </button>
-                    <button
+          <button
             onClick={() => setActiveTab('shortcuts')}
             className={`${styles.tab} ${activeTab === 'shortcuts' ? styles.tabActive : ''}`}
           >
@@ -107,9 +167,22 @@ const ChatWindow = ({ onClose, activeTab, setActiveTab }) => {
       {/* Body */}
       <div className={styles.body}>
         {activeTab === 'chat' && (
-          <>
-            <div className={styles.msgBot}>Hey there! Ready to practice today? </div>
-          </>
+          <div className={styles.chatMessages}>
+            {messages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={msg.type === 'user' ? styles.msgUser : styles.msgBot}
+              >
+                {msg.text}
+              </div>
+            ))}
+            {loading && (
+              <div className={styles.msgBot}>
+                <span style={{ fontSize: '0.9em', opacity: 0.7 }}>Thinking...</span>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
         )}
 
         {activeTab === 'faqs' && (
@@ -123,24 +196,23 @@ const ChatWindow = ({ onClose, activeTab, setActiveTab }) => {
           </div>
         )}
 
-          {activeTab === 'shortcuts' && (
-            <>
-              <div className={`${styles.msgBot} ${styles.clickable}`} onClick={handlePlanClick}>
-                  Make a Practice Plan?
-              </div>
-              <div className={`${styles.msgBot} ${styles.clickable}`} onClick={handleProgressClick}>
-                  Check Your Progress?
-              </div>
-              <div className={`${styles.msgBot} ${styles.clickable}`} onClick={handleExercisesClick}>
-                  View Exercises?
-              </div>
-              <div className={`${styles.msgBot} ${styles.clickable}`} onClick={handleQuizClick}>
-                  Take a Quiz?
-              </div>
-            </>
+        {activeTab === 'shortcuts' && (
+          <>
+            <div className={`${styles.msgBot} ${styles.clickable}`} onClick={handlePlanClick}>
+              Make a Practice Plan?
+            </div>
+            <div className={`${styles.msgBot} ${styles.clickable}`} onClick={handleProgressClick}>
+              Check Your Progress?
+            </div>
+            <div className={`${styles.msgBot} ${styles.clickable}`} onClick={handleExercisesClick}>
+              View Exercises?
+            </div>
+            <div className={`${styles.msgBot} ${styles.clickable}`} onClick={handleQuizClick}>
+              Take a Quiz?
+            </div>
+          </>
         )}
       </div>
-      
 
       {/* Footer */}
       {activeTab === 'chat' && (
@@ -149,18 +221,16 @@ const ChatWindow = ({ onClose, activeTab, setActiveTab }) => {
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
             placeholder="Write your message..."
             className={styles.input}
+            disabled={loading}
           />
           <button
             className={styles.sendBtn}
             aria-label="Send"
-            onClick={() => {
-              if (message.trim()) {
-                // For now, just clear the message. Backend chat integration would go here.
-                setMessage('');
-              }
-            }}
+            onClick={handleSendMessage}
+            disabled={loading || !message.trim()}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />

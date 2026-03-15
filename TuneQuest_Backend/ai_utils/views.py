@@ -588,6 +588,79 @@ def get_token_balance(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def chat_message(request):
+    """
+    Process a chat message and return AI response.
+    Costs 1 token per message.
+    
+    Expected payload:
+        {
+            message: string (user message)
+        }
+    
+    Returns:
+        { response: string (AI response), tokens_remaining: int }
+    """
+    from ai_utils.quiz_generator import QuizGenerator
+    
+    message = request.data.get('message', '').strip()
+    if not message:
+        return JsonResponse({'error': 'Message cannot be empty'}, status=400)
+    
+    # Get user token
+    token_obj, _ = AIToken.objects.get_or_create(
+        user=request.user,
+        defaults={'tokens_remaining': _get_token_limit_for_user(request.user), 'tokens_limit': _get_token_limit_for_user(request.user)},
+    )
+    
+    # Check if user has tokens
+    if token_obj.tokens_remaining <= 0:
+        return JsonResponse(
+            {'error': 'No AI tokens remaining. Upgrade to premium for more.'},
+            status=402,
+        )
+    
+    try:
+        # Use quiz generator's Gemini client for chat responses
+        generator = QuizGenerator()
+        
+        # Build a prompt for TuneQuest assistant
+        system_prompt = """You are TuneQuest, a friendly music practice assistant. 
+        You help users with practice plans, learning strategies, instrument tips, and music theory.
+        Keep responses concise (2-3 sentences max) and encouraging.
+        If user asks about generating a practice plan, quiz, or song, mention they can use the dedicated buttons in the app."""
+        
+        # Call Gemini with the user message
+        response = generator.client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=[
+                {
+                    'role': 'user',
+                    'parts': [{'text': f"{system_prompt}\n\nUser: {message}"}]
+                }
+            ]
+        )
+        
+        ai_response = response.text if response.text else "I couldn't generate a response. Please try again."
+        
+        # Deduct token
+        token_obj.tokens_remaining -= 1
+        token_obj.tokens_used += 1
+        token_obj.save()
+        
+        return JsonResponse({
+            'response': ai_response,
+            'tokens_remaining': token_obj.tokens_remaining,
+        })
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': f'Failed to process message: {str(e)}'}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def generate_practice_plan(request):
     """Generate an AI practice plan, costing 1 token.
     

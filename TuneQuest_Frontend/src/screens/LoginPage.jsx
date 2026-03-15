@@ -3,8 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { Container, Row, Col } from "react-bootstrap";
 import { loginSuccess, setError as setAuthError } from "../redux/slices/authSlice";
-import { setInstrument, setSkillLevel } from "../redux/slices/profileSlice";
+import { setInstrument, setSkillLevel, setProfileCompletion } from "../redux/slices/profileSlice";
 import { fetchProfileWithToken, loginUser } from "../api/client";
+import api from "../api/client";
 import styles from "../styles/screens/AuthPage.module.css";
 
 function LoginPage() {
@@ -38,6 +39,17 @@ function LoginPage() {
         if (user.profile.skill_level) {
           dispatch(setSkillLevel(user.profile.skill_level));
         }
+      }
+      
+      // Fetch profile completion status from database
+      try {
+        const completionRes = await api.get('/api/auth/profile-completion/');
+        if (completionRes.data) {
+          dispatch(setProfileCompletion(completionRes.data));
+        }
+      } catch (err) {
+        // Silently ignore profile completion fetch errors
+        console.log('Could not fetch profile completion status');
       }
       
       navigate("/dashboard");

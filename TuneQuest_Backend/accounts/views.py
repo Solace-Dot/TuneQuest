@@ -156,3 +156,63 @@ class CustomTokenRefreshView(TokenRefreshView):
         
         return response
 
+
+class ProfileCompletionView(APIView):
+    """
+    API endpoints for fetching and saving user profile completion status.
+    
+    GET /api/auth/profile-completion/ - Fetch profile completion status
+    POST /api/auth/profile-completion/ - Save profile completion status
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        """Fetch the user's profile completion status."""
+        from .models import ProfileCompletion
+        
+        try:
+            profile_completion = ProfileCompletion.objects.get(user=request.user)
+            return Response({
+                'is_completed': profile_completion.is_completed,
+                'instrument_name': profile_completion.instrument_name,
+                'skill_level': profile_completion.skill_level,
+                'completed_at': profile_completion.completed_at,
+            })
+        except ProfileCompletion.DoesNotExist:
+            # Return default state if not yet created
+            return Response({
+                'is_completed': False,
+                'instrument_name': '',
+                'skill_level': '',
+                'completed_at': None,
+            })
+    
+    def post(self, request):
+        """Save or update profile completion status."""
+        from .models import ProfileCompletion
+        from django.utils import timezone
+        
+        is_completed = request.data.get('is_completed', False)
+        instrument_name = request.data.get('instrument_name', '')
+        skill_level = request.data.get('skill_level', '')
+        
+        profile_completion, created = ProfileCompletion.objects.get_or_create(user=request.user)
+        
+        profile_completion.is_completed = is_completed
+        profile_completion.instrument_name = instrument_name
+        profile_completion.skill_level = skill_level
+        
+        # Set completed_at only when profile is marked as completed
+        if is_completed and not profile_completion.completed_at:
+            profile_completion.completed_at = timezone.now()
+        
+        profile_completion.save()
+        
+        return Response({
+            'success': True,
+            'is_completed': profile_completion.is_completed,
+            'instrument_name': profile_completion.instrument_name,
+            'skill_level': profile_completion.skill_level,
+            'completed_at': profile_completion.completed_at,
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+

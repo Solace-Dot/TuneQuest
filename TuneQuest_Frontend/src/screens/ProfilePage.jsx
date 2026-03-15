@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Container } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
-import { setProfile } from '../redux/slices/profileSlice';
+import { setProfile, setProfileCompletion } from '../redux/slices/profileSlice';
 import { updateProfile } from '../services/api';
+import api from '../api/client';
 import { getReadableTimeUntilRefresh } from '../services/tokenRefresher';
 import styles from '../styles/screens/ProfilePage.module.css';
 
@@ -79,13 +80,30 @@ function ProfilePage() {
         skill_level: form.skillLevel,
         learning_goal: form.goal,
       });
+      
+      // Save profile completion status to database
+      const isComplete = !!form.instrument && !!form.skillLevel && !!form.goal?.trim() && !!user?.username;
+      await api.post('/api/auth/profile-completion/', {
+        is_completed: isComplete,
+        instrument_name: form.instrument,
+        skill_level: form.skillLevel,
+      });
+      
       dispatch(
         setProfile({
           instrument: form.instrument,
           skillLevel: form.skillLevel,
           goal: form.goal,
+          isCompleted: isComplete,
         })
       );
+      
+      dispatch(setProfileCompletion({
+        is_completed: isComplete,
+        instrument_name: form.instrument,
+        skill_level: form.skillLevel,
+      }));
+      
       setSaveState('saved');
       setTimeout(() => setSaveState('idle'), 2000);
     } catch (err) {

@@ -6,6 +6,7 @@ from .views import (
     generate_song_timeline, get_song_for_step,
     generate_detailed_progress_summary,
     complete_practice_session,
+    chat_message,
 )
 
 urlpatterns = [
@@ -15,6 +16,7 @@ urlpatterns = [
     path('quiz/<int:quiz_id>/delete/', delete_quiz, name='delete_quiz'),
     path('quiz/for-step/<str:step_id>/', get_quiz_for_step, name='get_quiz_for_step'),
     path('tokens/', get_token_balance, name='get_token_balance'),
+    path('chat/', chat_message, name='chat_message'),
     path('generate-practice-plan/', generate_practice_plan, name='generate_practice_plan'),
     path('generate-song-timeline/', generate_song_timeline, name='generate_song_timeline'),
     path('song/for-step/<str:step_id>/', get_song_for_step, name='get_song_for_step'),

@@ -10,6 +10,9 @@ const initialState = {
   goal: localStorage.getItem("tunequest-profile")
     ? JSON.parse(localStorage.getItem("tunequest-profile")).goal
     : null,
+  isCompleted: localStorage.getItem("tunequest-profile")
+    ? JSON.parse(localStorage.getItem("tunequest-profile")).isCompleted || false
+    : false,
 };
 
 const profileSlice = createSlice({
@@ -32,12 +35,20 @@ const profileSlice = createSlice({
       state.instrument = action.payload.instrument;
       state.skillLevel = action.payload.skillLevel;
       state.goal = action.payload.goal;
+      state.isCompleted = action.payload.isCompleted || false;
+      saveProfile(state);
+    },
+    setProfileCompletion: (state, action) => {
+      state.isCompleted = action.payload.is_completed || action.payload.isCompleted;
+      state.instrument = action.payload.instrument_name || state.instrument;
+      state.skillLevel = action.payload.skill_level || state.skillLevel;
       saveProfile(state);
     },
     clearProfile: (state) => {
       state.instrument = null;
       state.skillLevel = null;
       state.goal = null;
+      state.isCompleted = false;
       localStorage.removeItem("tunequest-profile");
     },
   },
@@ -48,6 +59,7 @@ const saveProfile = (state) => {
     instrument: state.instrument,
     skillLevel: state.skillLevel,
     goal: state.goal,
+    isCompleted: state.isCompleted,
   };
   localStorage.setItem("tunequest-profile", JSON.stringify(profileData));
 };
@@ -57,6 +69,7 @@ export const {
   setSkillLevel,
   setGoal,
   setProfile,
+  setProfileCompletion,
   clearProfile,
 } = profileSlice.actions;
 

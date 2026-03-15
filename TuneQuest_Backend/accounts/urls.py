@@ -6,6 +6,7 @@ from .views import (
     ProfileView,
     ForgotPasswordView,
     CustomTokenRefreshView,
+    ProfileCompletionView,
 )
 
 urlpatterns = [
@@ -14,4 +15,5 @@ urlpatterns = [
     path("token/refresh/", CustomTokenRefreshView.as_view()),
     path("forgot-password/", ForgotPasswordView.as_view()),
     path("profile/", ProfileView.as_view()),
+    path("profile-completion/", ProfileCompletionView.as_view()),
 ]

@@ -30,4 +30,18 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"{self.user.email} Profile"
 
-    
+
+class ProfileCompletion(models.Model):
+    """
+    Tracks whether a user has completed their profile setup.
+    Persists across page refreshes and sessions.
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile_completion')
+    is_completed = models.BooleanField(default=False, help_text="Whether profile setup is complete")
+    instrument_name = models.CharField(max_length=100, blank=True, help_text="User's instrument")
+    skill_level = models.CharField(max_length=50, blank=True, help_text="User's skill level")
+    completed_at = models.DateTimeField(null=True, blank=True, help_text="When profile was completed")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.email} - Profile {'Completed' if self.is_completed else 'Incomplete'}"
