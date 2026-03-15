@@ -26,6 +26,8 @@ from django.db import transaction
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from .models import Payment, Subscription
 
@@ -166,6 +168,71 @@ def _paypal_request(method, endpoint, payload=None):
     except requests.RequestException as e:
         logger.error(f"PayPal API request failed: {str(e)}")
         raise PayPalError(f"PayPal connection failed: {str(e)}")
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cancel_subscription(request):
+    """Cancel user's active premium subscription."""
+    try:
+        subscription = Subscription.objects.filter(
+            user=request.user,
+            plan_type='premium',
+            subscription_status='active'
+        ).first()
+        
+        if not subscription:
+            return Response({
+                'detail': 'No active premium subscription to cancel.'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Mark subscription as cancelled
+        subscription.subscription_status = 'cancelled'
+        subscription.save()
+        
+        logger.info(f"Subscription cancelled for user {request.user.id}")
+        
+        return Response({
+            'detail': 'Your Premium subscription has been cancelled. Access will continue until the end of your billing period.',
+            'subscription': 'free'
+        })
+    except Exception as e:
+        logger.error(f"Error cancelling subscription: {str(e)}", exc_info=True)
+        return Response({
+            'detail': 'Failed to cancel subscription. Please try again.'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_subscription_status(request):
+    """Fetch current subscription status for authenticated user."""
+    try:
+        subscription = Subscription.objects.filter(
+            user=request.user,
+            plan_type='premium',
+            subscription_status='active'
+        ).first()
+        
+        if subscription and subscription.is_active:
+            return Response({
+                'subscription': 'premium',
+                'end_date': subscription.end_date,
+                'days_remaining': subscription.days_remaining,
+            })
+        else:
+            return Response({
+                'subscription': 'free',
+                'end_date': None,
+                'days_remaining': None,
+            })
+    except Exception as e:
+        logger.error(f"Error fetching subscription status: {str(e)}", exc_info=True)
+        return Response({
+            'subscription': 'free',
+            'end_date': None,
+            'days_remaining': None,
+        })
 
 
 class PayPalConfigView(APIView):
@@ -353,17 +420,21 @@ class PayPalCaptureOrderView(APIView):
 
                 # If payment is successful, upgrade AI tokens (add 40 to existing)
                 if capture_status == "COMPLETED":
-                    token_obj, _ = AIToken.objects.get_or_create(
+                    token_obj, created = AIToken.objects.get_or_create(
                         user=request.user,
-                        defaults={'tokens_remaining': 50, 'tokens_limit': 50},
+                        defaults={'tokens_remaining': 50, 'tokens_limit': 10},
                     )
                     
-                    # If user was on free tier (limit=10), add 40 tokens
-                    if token_obj.tokens_limit == 10:
+                    # If user was on free tier (limit=10), add 40 tokens. If new user, start at 50.
+                    if created:
+                        # New user, upgrading directly to premium with 50 tokens
+                        token_obj.tokens_remaining = 50
+                        token_obj.tokens_limit = 50
+                    elif token_obj.tokens_limit == 10:
+                        # Existing free tier user, add 40 tokens with cap at 50
                         token_obj.tokens_remaining = min(token_obj.tokens_remaining + 40, 50)
+                        token_obj.tokens_limit = 50
                     
-                    # Update token limit to premium
-                    token_obj.tokens_limit = 50
                     token_obj.save()
                     
                     logger.info(f"Premium tokens upgraded for user {request.user.id}: {token_obj.tokens_remaining}/50")

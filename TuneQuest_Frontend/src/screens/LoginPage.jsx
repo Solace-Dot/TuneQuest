@@ -29,7 +29,20 @@ function LoginPage() {
       }
 
       const user = await fetchProfileWithToken(token);
-      dispatch(loginSuccess({ token, user, subscription: "free" }));
+      
+      // Fetch subscription status from backend
+      let subscription = "free";
+      try {
+        const subRes = await api.get('/api/payments/subscription/status/');
+        if (subRes.data?.subscription === 'premium') {
+          subscription = 'premium';
+        }
+      } catch (err) {
+        // Default to free tier if fetch fails
+        console.log('Could not fetch subscription status, defaulting to free tier');
+      }
+      
+      dispatch(loginSuccess({ token, user, subscription }));
       
       // Restore profile data from the user object
       if (user?.profile) {

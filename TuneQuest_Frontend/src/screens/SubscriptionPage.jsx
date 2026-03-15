@@ -112,7 +112,10 @@ function SubscriptionPage() {
   const handleApprove = async (data) => {
     const result = await capturePayPalOrder(data.orderID);
     dispatch(setSubscription("premium"));
-    dispatch(setTokens(PREMIUM_TOKEN_LIMIT));
+    // Don't set tokens here - let backend return actual token count
+    if (result?.tokens_remaining) {
+      dispatch(setTokens(result.tokens_remaining));
+    }
     setPaymentSuccess("Payment complete. Your Premium plan is now active.");
     return result;
   };
@@ -122,7 +125,10 @@ function SubscriptionPage() {
       setPaymentError("");
       const result = await capturePayPalOrder(`MOCK-LOCAL-${Date.now()}`);
       dispatch(setSubscription("premium"));
-      dispatch(setTokens(PREMIUM_TOKEN_LIMIT));
+      // Don't set tokens here - let backend return actual token count
+      if (result?.tokens_remaining) {
+        dispatch(setTokens(result.tokens_remaining));
+      }
       setPaymentSuccess(
         result?.detail || "Mock payment complete. Your Premium plan is now active.",
       );
@@ -226,9 +232,13 @@ function SubscriptionPage() {
                       </PayPalScriptProvider>
                     </div>
                   )
-                ) : (
+                ) : subscription === "free" ? (
                   <button className="btn btn-outline" disabled>
                     Your Current Plan
+                  </button>
+                ) : (
+                  <button className="btn btn-outline" disabled>
+                    Not Available
                   </button>
                 )}
               </div>
@@ -249,35 +259,6 @@ function SubscriptionPage() {
           </Row>
         )}
 
-        <Row className="mt-5 g-4">
-          <Col xs={12}>
-            <div className="card">
-              <h3>Detailed Feature Comparison</h3>
-              <div className={styles.table}>
-                <div className={styles.tableRow}>
-                  <div>Feature</div>
-                  <div>Free</div>
-                  <div>Premium</div>
-                </div>
-                {[
-                  "AI-Generated Practice Plans",
-                  "Real-time Interactive Feedback",
-                  "Unlimited Practice Sessions",
-                  "Regenerate AI Plan (Unlimited Refreshes)",
-                  "Detailed AI Progress Summaries",
-                  "Ad-free Experience",
-                ].map((feat) => (
-                  <div key={feat} className={styles.tableRow}>
-                    <div>{feat}</div>
-                    <div>✔</div>
-                    <div>✔</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Col>
-        </Row>
-
         <Row className="mt-4 g-4">
           <Col xs={12}>
             <div className="card">
@@ -287,8 +268,7 @@ function SubscriptionPage() {
                   Can I cancel my subscription anytime?
                 </div>
                 <div className="small">
-                  Yes, you can cancel anytime and keep access until the end of
-                  your billing period.
+                  Yes, you can cancel your Premium plan anytime from the Settings page. Your Premium access will continue until the end of your billing period.
                 </div>
               </div>
               <div className={styles.faqItem}>
@@ -296,14 +276,29 @@ function SubscriptionPage() {
                   What payment methods do you accept?
                 </div>
                 <div className="small">
-                  We accept PayPal for all subscriptions. Your payment
-                  information is secure and encrypted.
+                  We accept PayPal for all subscriptions. Your payment information is secure and encrypted.
                 </div>
               </div>
               <div className={styles.faqItem}>
                 <div className={styles.faqQuestion}>Is there a free trial?</div>
                 <div className="small">
-                  Yes, start with our Free plan to explore all basic features.
+                  Yes! Start with our Free plan to explore all basic features: 10 AI tokens per month, unlimited practice sessions, and access to all learning tools.
+                </div>
+              </div>
+              <div className={styles.faqItem}>
+                <div className={styles.faqQuestion}>
+                  How many AI tokens do I need?
+                </div>
+                <div className="small">
+                  Each AI action (practice plan, quiz, song timeline, progress summary, or chat message) costs 1 token. Free tier gets 10/month, Premium gets 50/month.
+                </div>
+              </div>
+              <div className={styles.faqItem}>
+                <div className={styles.faqQuestion}>
+                  Do unused tokens roll over?
+                </div>
+                <div className="small">
+                  No, tokens reset each month. Premium members can regenerate practice plans unlimited times, while free users are limited to 3 per month.
                 </div>
               </div>
             </div>

@@ -4,10 +4,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useSelector, useDispatch } from 'react-redux';
 import { deleteAccount } from '../services/api';
-import { logout } from '../redux/slices/authSlice';
+import { logout, setSubscription } from '../redux/slices/authSlice';
 import { clearPlan } from '../redux/slices/aiPlanSlice';
 import { clearProfile } from '../redux/slices/profileSlice';
 import { BACKGROUND_OPTIONS } from '../backgrounds/BackgroundManager';
+import api from '../api/client';
 import styles from '../styles/screens/SettingsPage.module.css';
 
 const DEFAULTS = {
@@ -130,17 +131,41 @@ function Row({ label, description, children }) {
 function SettingsPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { subscription } = useSelector((state) => state.auth);
   const [settings, setSettings] = useState(load);
   const [saved, setSaved] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [premiumEndDate, setPremiumEndDate] = useState(null);
+  const [daysRemaining, setDaysRemaining] = useState(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelError, setCancelError] = useState('');
 
   // Apply side-effects on load — settings are managed separately via update() handler
   // Apply background on load
   useEffect(() => {
     applyBackground(settings.background);
   }, [settings.background]);
+
+  // Fetch premium subscription details
+  useEffect(() => {
+    const fetchSubscriptionDetails = async () => {
+      if (subscription === 'premium') {
+        try {
+          const res = await api.get('/api/payments/subscription/status/');
+          if (res.data?.end_date) {
+            const endDate = new Date(res.data.end_date);
+            setPremiumEndDate(endDate);
+            setDaysRemaining(res.data.days_remaining);
+          }
+        } catch (err) {
+          console.error('Failed to fetch subscription details:', err);
+        }
+      }
+    };
+    fetchSubscriptionDetails();
+  }, [subscription]);
 
   const update = (key, value) => {
     setSettings(prev => {
@@ -198,6 +223,24 @@ function SettingsPage() {
       const msg = err.response?.data?.detail || "Failed to delete account. Please try again.";
       setDeleteError(msg);
       setDeleteLoading(false);
+    }
+  };
+
+  const handleCancelPremium = async () => {
+    setCancelLoading(true);
+    setCancelError('');
+    try {
+      // Call backend to cancel subscription
+      await api.post('/api/payments/subscription/cancel/');
+      // Update subscription status to free
+      dispatch(setSubscription('free'));
+      setPremiumEndDate(null);
+      setDaysRemaining(null);
+    } catch (err) {
+      const msg = err.response?.data?.detail || "Failed to cancel subscription. Please try again.";
+      setCancelError(msg);
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -280,6 +323,49 @@ function SettingsPage() {
               <Toggle checked={settings.shareProgress} onChange={v => update('shareProgress', v)} />
             </Row>
           </Section>
+
+          {/* ── Premium Tier ── */}
+          {subscription === 'premium' && (
+            <Section icon="👑" title="Premium Tier">
+              <Row label="Status" description="Your current subscription status">
+                <span style={{ color: 'var(--primary)', fontWeight: '600' }}>Active</span>
+              </Row>
+              {premiumEndDate && (
+                <>
+                  <Row label="Expires On" description="Your Premium access will end on this date">
+                    <span>{premiumEndDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                  </Row>
+                  {daysRemaining !== null && (
+                    <Row label="Days Remaining" description="Time left on your current subscription">
+                      <span>{daysRemaining} day{daysRemaining !== 1 ? 's' : ''}</span>
+                    </Row>
+                  )}
+                </>
+              )}
+              {cancelError && (
+                <div style={{ 
+                  color: 'var(--danger)',
+                  fontSize: '0.9em', 
+                  marginBottom: '10px',
+                  padding: '8px 12px',
+                  backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(220, 38, 38, 0.3)'
+                }}>
+                  {cancelError}
+                </div>
+              )}
+              <Row label="Cancel Subscription" description="End your Premium tier subscription">
+                <button 
+                  onClick={handleCancelPremium} 
+                  className={styles.resetBtn}
+                  disabled={cancelLoading}
+                >
+                  {cancelLoading ? 'Canceling...' : 'End Premium Tier'}
+                </button>
+              </Row>
+            </Section>
+          )}
 
           {/* ── Account ── */}
           <Section icon="👤" title="Account">
