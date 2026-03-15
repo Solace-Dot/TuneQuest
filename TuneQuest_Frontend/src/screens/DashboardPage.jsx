@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { Container, Row, Col } from "react-bootstrap";
 import ProgressBar from "../components/ProgressBar";
 import styles from "../styles/screens/DashboardPage.module.css";
 import { fetchProgress } from "../api/client";
@@ -16,7 +17,7 @@ function DashboardPage() {
 
   return (
     <div className="page-shell">
-      <div className="container-fluid">
+      <Container fluid>
         <div className={styles.greeting}>
           Welcome back, {user?.name || "Musician"}! 🎵
         </div>
@@ -24,8 +25,8 @@ function DashboardPage() {
           Continue your musical journey with personalized practice.
         </p>
 
-        <div className="row g-4">
-          <div className="col-lg-6 col-md-12">
+        <Row className="g-4">
+          <Col lg={6} md={12}>
             <div className="card">
               <div className={styles.cardHeader}>
                 <div>
@@ -34,16 +35,16 @@ function DashboardPage() {
                 </div>
                 <div className="pill">{instrument}</div>
               </div>
-              <div className="row g-3 mt-2">
-                <div className="col-6">
+              <Row className="g-3 mt-2">
+                <Col xs={6}>
                   <div className={styles.metaLabel}>Instrument</div>
                   <div className={styles.metaValue}>{instrument}</div>
-                </div>
-                <div className="col-6">
+                </Col>
+                <Col xs={6}>
                   <div className={styles.metaLabel}>Level</div>
                   <div className={styles.metaValue}>{skillLevel}</div>
-                </div>
-              </div>
+                </Col>
+              </Row>
               <div className="divider mt-3" />
               <div className={styles.statRow}>
                 <div>
@@ -55,9 +56,9 @@ function DashboardPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </Col>
 
-          <div className="col-lg-6 col-md-12">
+          <Col lg={6} md={12}>
             <div className="card">
               <div className={styles.cardHeader}>
                 <div>
@@ -69,39 +70,39 @@ function DashboardPage() {
                 <span>✔</span>
               </div>
               <ProgressBar value={40} />
-              <div className="row g-3 mt-3">
-                <div className="col-4">
+              <Row className="g-3 mt-3">
+                <Col xs={4}>
                   <div className={styles.statBox}>
                     <div className={styles.statNumber}>
                       {progress?.completed ?? 6}
                     </div>
                     <div className={styles.metaLabel}>Completed</div>
                   </div>
-                </div>
-                <div className="col-4">
+                </Col>
+                <Col xs={4}>
                   <div className={styles.statBox}>
                     <div className={styles.statNumber}>
                       {progress?.remaining ?? 9}
                     </div>
                     <div className={styles.metaLabel}>Remaining</div>
                   </div>
-                </div>
-                <div className="col-4">
+                </Col>
+                <Col xs={4}>
                   <div className={styles.statBox}>
                     <div className={styles.statNumber}>{progress?.minutes ?? 75}</div>
                     <div className={styles.metaLabel}>Minutes</div>
                   </div>
-                </div>
-              </div>
+                </Col>
+              </Row>
               <div className="alert mt-3">
                 You're off to a good start. Keep practicing!
               </div>
             </div>
-          </div>
-        </div>
+          </Col>
+        </Row>
 
-        <div className="row g-4 mt-4">
-          <div className="col-lg-12 col-md-12">
+        <Row className="g-4 mt-4">
+          <Col lg={12} md={12}>
             <div className="card">
               <div className={styles.cardHeader}>
                 <div>
@@ -133,11 +134,11 @@ function DashboardPage() {
                 View Detailed Progress
               </Link>
             </div>
-          </div>
-        </div>
+          </Col>
+        </Row>
 
-        <div className="row g-4 mt-4">
-          <div className="col-lg-12 col-md-12">
+        <Row className="g-4 mt-4">
+          <Col lg={12} md={12}>
             <div className={styles.actionsCard}>
               <div className={styles.buttonsRow}>
                 <Link
@@ -162,9 +163,9 @@ function DashboardPage() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      </div>
+          </Col>
+        </Row>
+      </Container>
     </div>
   );
 }

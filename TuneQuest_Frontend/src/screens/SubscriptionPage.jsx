@@ -1,7 +1,15 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import classNames from "classnames";
 import { useDispatch, useSelector } from "react-redux";
+import { Container, Row, Col } from "react-bootstrap";
+import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { setSubscription } from "../redux/slices/authSlice";
+import {
+  API_BASE_URL,
+  capturePayPalOrder,
+  createPayPalOrder,
+  fetchPayPalConfig,
+} from "../api/client";
 import styles from "../styles/screens/SubscriptionPage.module.css";
 
 const plans = [
@@ -37,29 +45,90 @@ const plans = [
 
 function SubscriptionPage() {
   const dispatch = useDispatch();
-  const { subscription } = useSelector((state) => state.auth);
+  const { subscription, token } = useSelector((state) => state.auth);
+  const [paypalConfig, setPayPalConfig] = useState(null);
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentSuccess, setPaymentSuccess] = useState("");
 
-  const handleUpgrade = () => {
+  const paypalOptions = useMemo(() => {
+    if (!paypalConfig?.clientId) {
+      return null;
+    }
+
+    return {
+      "client-id": paypalConfig.clientId,
+      currency: paypalConfig.currency || "USD",
+      intent: "capture",
+    };
+  }, [paypalConfig]);
+
+  useEffect(() => {
+    async function loadConfig() {
+      if (!token) {
+        return;
+      }
+
+      try {
+        const config = await fetchPayPalConfig();
+        setPayPalConfig(config);
+      } catch (err) {
+        const isNetworkError = !err?.response;
+        setPaymentError(
+          err?.response?.data?.detail ||
+            (isNetworkError
+              ? `Cannot reach backend API at ${API_BASE_URL}.`
+              : "Unable to load PayPal checkout right now."),
+        );
+      }
+    }
+
+    loadConfig();
+  }, [token]);
+
+  const createOrder = async () => {
+    setPaymentError("");
+    const data = await createPayPalOrder("premium");
+    return data.orderID;
+  };
+
+  const handleApprove = async (data) => {
+    const result = await capturePayPalOrder(data.orderID);
     dispatch(setSubscription("premium"));
+    setPaymentSuccess("Payment complete. Your Premium plan is now active.");
+    return result;
+  };
+
+  const handleMockCheckout = async () => {
+    try {
+      setPaymentError("");
+      const result = await capturePayPalOrder(`MOCK-LOCAL-${Date.now()}`);
+      dispatch(setSubscription("premium"));
+      setPaymentSuccess(
+        result?.detail || "Mock payment complete. Your Premium plan is now active.",
+      );
+    } catch (err) {
+      setPaymentError(err?.response?.data?.detail || "Mock payment failed.");
+    }
   };
 
   return (
     <div className="page-shell">
-      <div className="container-fluid">
+      <Container fluid>
         <div className={styles.hero}>
           <h2 className={styles.title}>Choose Your Plan</h2>
           <p className="subtext">
-            Unlock unlimited practice sessions and AI insights to accelerate your
-            musical growth.
+            Unlock unlimited practice sessions and AI insights to accelerate
+            your musical growth.
           </p>
           <div className={styles.current}>
-            Current Plan: {subscription === "premium" ? "Premium" : "Free Trial"}
+            Current Plan:{" "}
+            {subscription === "premium" ? "Premium" : "Free Trial"}
           </div>
         </div>
 
-        <div className="row g-4 justify-content-center">
+        <Row className="g-4 justify-content-center">
           {plans.map((plan) => (
-            <div key={plan.key} className="col-lg-5 col-md-12">
+            <Col key={plan.key} lg={5} md={12}>
               <div
                 className={classNames("card", {
                   [styles.highlight]: plan.key === "premium",
@@ -98,80 +167,129 @@ function SubscriptionPage() {
                   ))}
                 </div>
                 {plan.key === "premium" ? (
-                  <button className="btn btn-primary" onClick={handleUpgrade}>
-                    Upgrade Now
-                  </button>
+                  subscription === "premium" ? (
+                    <button className="btn btn-outline" disabled>
+                      Your Current Plan
+                    </button>
+                  ) : !token ? (
+                    <button className="btn btn-outline" disabled>
+                      Login to Upgrade
+                    </button>
+                  ) : !paypalOptions ? (
+                    <button className="btn btn-outline" disabled>
+                      Loading PayPal...
+                    </button>
+                  ) : paypalConfig?.mockMode ? (
+                    <button className="btn btn-primary" onClick={handleMockCheckout}>
+                      Simulate PayPal Payment
+                    </button>
+                  ) : (
+                    <div className={styles.paypalWrap}>
+                      <PayPalScriptProvider options={paypalOptions}>
+                        <PayPalButtons
+                          style={{
+                            layout: "vertical",
+                            shape: "rect",
+                            label: "paypal",
+                          }}
+                          createOrder={createOrder}
+                          onApprove={handleApprove}
+                          onCancel={() =>
+                            setPaymentError("Payment was cancelled.")
+                          }
+                          onError={() =>
+                            setPaymentError(
+                              "PayPal checkout failed. Please try again.",
+                            )
+                          }
+                        />
+                      </PayPalScriptProvider>
+                    </div>
+                  )
                 ) : (
                   <button className="btn btn-outline" disabled>
                     Your Current Plan
                   </button>
                 )}
               </div>
-            </div>
+            </Col>
           ))}
-        </div>
+        </Row>
 
-        <div className="row mt-5 g-4">
-        <div className="col-12">
-          <div className="card">
-            <h3>Detailed Feature Comparison</h3>
-            <div className={styles.table}>
-              <div className={styles.tableRow}>
-                <div>Feature</div>
-                <div>Free</div>
-                <div>Premium</div>
-              </div>
-              {[
-                "AI-Generated Practice Plans",
-                "Real-time Interactive Feedback",
-                "Unlimited Practice Sessions",
-                "Regenerate AI Plan (Unlimited Refreshes)",
-                "Detailed AI Progress Summaries",
-                "Ad-free Experience",
-              ].map((feat) => (
-                <div key={feat} className={styles.tableRow}>
-                  <div>{feat}</div>
-                  <div>✔</div>
-                  <div>✔</div>
+        {(paymentError || paymentSuccess) && (
+          <Row className="mt-3">
+            <Col xs={12}>
+              {paymentError && (
+                <div className="alert alert-error">{paymentError}</div>
+              )}
+              {paymentSuccess && (
+                <div className="alert alert-success">{paymentSuccess}</div>
+              )}
+            </Col>
+          </Row>
+        )}
+
+        <Row className="mt-5 g-4">
+          <Col xs={12}>
+            <div className="card">
+              <h3>Detailed Feature Comparison</h3>
+              <div className={styles.table}>
+                <div className={styles.tableRow}>
+                  <div>Feature</div>
+                  <div>Free</div>
+                  <div>Premium</div>
                 </div>
-              ))}
+                {[
+                  "AI-Generated Practice Plans",
+                  "Real-time Interactive Feedback",
+                  "Unlimited Practice Sessions",
+                  "Regenerate AI Plan (Unlimited Refreshes)",
+                  "Detailed AI Progress Summaries",
+                  "Ad-free Experience",
+                ].map((feat) => (
+                  <div key={feat} className={styles.tableRow}>
+                    <div>{feat}</div>
+                    <div>✔</div>
+                    <div>✔</div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
+          </Col>
+        </Row>
 
-      <div className="row mt-4 g-4">
-        <div className="col-12">
-          <div className="card">
-            <h3>Frequently Asked Questions</h3>
-            <div className={styles.faqItem}>
-              <div className={styles.faqQuestion}>
-                Can I cancel my subscription anytime?
+        <Row className="mt-4 g-4">
+          <Col xs={12}>
+            <div className="card">
+              <h3>Frequently Asked Questions</h3>
+              <div className={styles.faqItem}>
+                <div className={styles.faqQuestion}>
+                  Can I cancel my subscription anytime?
+                </div>
+                <div className="small">
+                  Yes, you can cancel anytime and keep access until the end of
+                  your billing period.
+                </div>
               </div>
-              <div className="small">
-                Yes, you can cancel anytime and keep access until the end of your
-                billing period.
+              <div className={styles.faqItem}>
+                <div className={styles.faqQuestion}>
+                  What payment methods do you accept?
+                </div>
+                <div className="small">
+                  We accept PayPal for all subscriptions. Your payment
+                  information is secure and encrypted.
+                </div>
+              </div>
+              <div className={styles.faqItem}>
+                <div className={styles.faqQuestion}>Is there a free trial?</div>
+                <div className="small">
+                  Yes, start with our Free plan to explore all basic features.
+                </div>
               </div>
             </div>
-            <div className={styles.faqItem}>
-              <div className={styles.faqQuestion}>
-                What payment methods do you accept?
-              </div>
-              <div className="small">
-                We accept PayPal for all subscriptions. Your payment information is
-                secure and encrypted.
-              </div>
-            </div>
-            <div className={styles.faqItem}>
-              <div className={styles.faqQuestion}>Is there a free trial?</div>
-              <div className="small">
-                Yes, start with our Free plan to explore all basic features.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      </div>
+          </Col>
+        </Row>
+      </Container>
     </div>
   );
 }

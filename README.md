@@ -39,9 +39,6 @@ Instead, it will copy all the configuration files and the transitive dependencie
 
 You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
 
-
-
-
 # TuneQuest Backend
 
 This is the backend service for the TuneQuest project, built with **Django** and **Django REST Framework (DRF)**.  
@@ -50,6 +47,7 @@ It provides APIs for the frontend (`TuneQuest_Frontend`) to interact with the da
 ---
 
 ## 🚀 Features
+
 - Django 5.x project with REST API support
 - Configurable settings in `config/settings.py`
 - Ready for integration with React frontend
@@ -58,6 +56,7 @@ It provides APIs for the frontend (`TuneQuest_Frontend`) to interact with the da
 ---
 
 ## 📂 Project Structure
+
 ```bash
 TuneQuest_Backend/
 ├── config/            # Django project configuration (settings, urls, wsgi, asgi)
@@ -68,37 +67,59 @@ TuneQuest_Backend/
 ├── manage.py           # Django management script
 └── (apps will be added here, e.g. api, users, quests)
 ```
+
 ---
 
 ## 🛠️ Setup Instructions
 
 ### 1. Activate Virtual Environment
+
 From the project root (`TuneQuestMain`):
+
 ```bash
 .venv\Scripts\activate   # Windows (PowerShell)
-source .venv/bin/activate # macOS/Linux 
+source .venv/bin/activate # macOS/Linux
 
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 pip install -r requirements.txt
 
 ```
 
 ### 3. Run migrations
+
 ```bash
 python manage.py migrate
 
 ```
 
 ### 4. Start Development Server
+
 ```bash
 python manage.py runserver
 
 ```
 
+### 5. Configure PayPal (Sandbox)
 
+Set these environment variables before starting the backend:
+
+```bash
+PAYPAL_CLIENT_ID=your_sandbox_client_id
+PAYPAL_SECRET=your_sandbox_secret
+PAYPAL_MODE=sandbox
+PAYPAL_CURRENCY=USD
+PAYPAL_PREMIUM_PRICE=9.99
+```
+
+The frontend uses these backend endpoints:
+
+- `GET /api/payments/paypal/config/`
+- `POST /api/payments/paypal/orders/`
+- `POST /api/payments/paypal/orders/{order_id}/capture/`
 
 ## Learn More
 
