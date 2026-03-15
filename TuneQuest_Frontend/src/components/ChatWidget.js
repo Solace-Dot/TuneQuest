@@ -15,7 +15,7 @@ const FAQ_ITEMS = [
   },
   {
     question: 'Can I take quizzes for different skill levels?',
-    answer: 'Yes. In the Quiz tab, ask for a quiz with a level like beginner, intermediate, or advanced.',
+    answer: 'Yes. In the Quiz tab, ask for a quiz with a level like beginner, intermediate, or advanced (coming soon).',
   },
   {
     question: 'What if I miss practice days?',

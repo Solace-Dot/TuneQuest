@@ -549,11 +549,14 @@ def complete_practice_session(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_token_balance(request):
     """Return the user's remaining AI token count and limit."""
+    from rest_framework.response import Response
+    
     # Allow unauthenticated requests - return default for guests
     if not request.user.is_authenticated:
-        return JsonResponse({
+        return Response({
             'tokens_remaining': 10,
             'tokens_used': 0,
             'tokens_limit': TOKEN_LIMIT_FREE,
@@ -578,7 +581,7 @@ def get_token_balance(request):
         token_obj.tokens_limit = token_limit
         token_obj.save()
     
-    return JsonResponse({
+    return Response({
         'tokens_remaining': token_obj.tokens_remaining,
         'tokens_used': token_obj.tokens_used,
         'tokens_limit': token_obj.tokens_limit,

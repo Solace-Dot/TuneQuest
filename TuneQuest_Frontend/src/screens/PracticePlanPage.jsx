@@ -78,6 +78,7 @@ function PracticePlanPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
+  const { subscription } = useSelector((state) => state.auth);
   const { instrument, skillLevel } = useSelector((state) => state.profile);
   const aiPlan = useSelector((state) => state.aiPlan.plan);
   const aiSkillLevel = useSelector((state) => state.aiPlan.skillLevel);
@@ -88,6 +89,7 @@ function PracticePlanPage() {
   const [songSelector, setSongSelector] = useState(null);
   const [quizLoadingStepId, setQuizLoadingStepId] = useState(null);
   const [quizErrorByStepId, setQuizErrorByStepId] = useState({});
+  const [remainingRegens, setRemainingRegens] = useState(3);
   // shape: { step, mode: 'library'|'composer', songTitle: '', loading: false, error: null }
 
   // Priority: Redux (AI-generated) > location.state (legacy nav) > null (show empty state)
@@ -121,6 +123,25 @@ function PracticePlanPage() {
       })),
     };
   }
+
+  // Fetch remaining plan regenerations on mount
+  React.useEffect(() => {
+    const fetchRemaining = async () => {
+      try {
+        // For free tier: 3 max per month, for premium: unlimited
+        if (subscription === 'premium') {
+          setRemainingRegens(null); // null means unlimited
+        } else {
+          // Fetch from backend (once API endpoint exists)
+          setRemainingRegens(3); // Default to 3 for now
+        }
+      } catch (err) {
+        console.error('Failed to fetch regeneration count:', err);
+        setRemainingRegens(3);
+      }
+    };
+    fetchRemaining();
+  }, [subscription]);
 
   async function launchQuizSession(step) {
     setQuizLoadingStepId(step.id);
@@ -425,7 +446,7 @@ function PracticePlanPage() {
             className="btn btn-outline"
             onClick={() => navigate("/plan/form")}
           >
-            Regenerate Plan
+            Regenerate Plan {remainingRegens !== null && `(${remainingRegens} left)`}
           </button>
         </div>
 
