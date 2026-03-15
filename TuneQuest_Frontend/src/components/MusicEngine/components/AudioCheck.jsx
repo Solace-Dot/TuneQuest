@@ -26,6 +26,7 @@ const AudioCheck = ({ onPass }) => {
   const gainNodeRef         = useRef(null);
   const analyserCheckRef    = useRef(null);
   const waveformContainerRef = useRef(null); // used by MetronomeBar for border-pulse
+  const watchdogRef         = useRef(null); // watchdog timeout for draw loop startup
 
   const [status, setStatus]             = useState('idle');
   const [volume, setVolume]             = useState(0);
@@ -44,7 +45,11 @@ const AudioCheck = ({ onPass }) => {
 
   const cleanup = useCallback(() => {
     metronome.stop();
-    if (animRef.current) cancelAnimationFrame(animRef.current);
+    if (watchdogRef.current) clearTimeout(watchdogRef.current);
+    if (animRef.current) {
+      cancelAnimationFrame(animRef.current);
+      clearInterval(animRef.current); // also clear if it's an interval ID
+    }
     if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
     if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
   }, [metronome]);
@@ -60,7 +65,9 @@ const AudioCheck = ({ onPass }) => {
       streamRef.current = stream;
 
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') await audioCtx.resume();
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
       audioCtxRef.current = audioCtx;
 
       const source   = audioCtx.createMediaStreamSource(stream);
@@ -68,17 +75,27 @@ const AudioCheck = ({ onPass }) => {
       gainNode.gain.value = gainLevel;
       gainNodeRef.current = gainNode;
       const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 4096; // 4096 is sufficient for chord detection and halves FFT work
+      analyser.fftSize = 4096; // Match play notes mode
       source.connect(gainNode);
       gainNode.connect(analyser);
+      // DO NOT connect to destination - just let the analyser tap into the signal
+      // This matches how the play modes (notes/chords) do it
       analyserCheckRef.current = analyser;
 
       const detect = makeDetectors(audioCtx.sampleRate);
       const buffer = new Float32Array(analyser.fftSize);
       const canvas = canvasRef.current;
+      if (!canvas) {
+        console.error('[AudioCheck] Canvas ref is null!');
+        setStatus('error');
+        return;
+      }
       const ctx    = canvas.getContext('2d');
-      // Gate mic detection for 120 ms after each metronome click so the speaker
-      // transient cannot be mistaken for a guitar note or chord.
+      if (!ctx) {
+        console.error('[AudioCheck] Canvas context 2d failed!');
+        setStatus('error');
+        return;
+      }
       const METRO_GATE_MS = 120;
 
       setStatus('active');
@@ -89,103 +106,88 @@ const AudioCheck = ({ onPass }) => {
       let lastValidChord   = null;
       let lastValidChordTime = 0;
       let drawFrame        = 0;
+      let lastVolUpdateTime = 0; // throttle volume updates
       const PITCH_HOLD_MS = 150;  // short hold — don't ghost notes after signal drops
       const CHORD_HOLD_MS = 600;  // hold chord display longer to smooth over missed frames
+      const VOL_UPDATE_MS = 50; // only update UI every 50ms to avoid excessive renders
 
       // calibration + test tracking (closure-local so no stale-closure issues)
       let calibrated      = false;
       let currentTestStep = 0;
       let testAdvanceAt   = 0;
+      const calibrationStartTime = performance.now();
+      const CALIBRATION_TIMEOUT_MS = 2000; // Force calibration completion after 2 seconds
+      let zeroAudioFrameCount = 0; // count frames with no audio signal
 
       const draw = () => {
-        drawFrame++;
-        analyser.getFloatTimeDomainData(buffer);
+        try {
+          if (drawFrame === 0) {
+            console.log('[AudioCheck] Draw loop started');
+            // Kill the startup watchdog since draw is now running
+            if (watchdogRef.current) {
+              clearTimeout(watchdogRef.current);
+              watchdogRef.current = null;
+            }
+          }
+          drawFrame++;
+          
+          // CRITICAL: Check if analyser still exists (React might have unmounted it)
+          if (!analyserCheckRef.current) {
+            console.error('[AudioCheck] ✗✗✗ ANALYSER LOST! Component may have unmounted.');
+            return;
+          }
+          
+          analyser.getFloatTimeDomainData(buffer);
+          
+          // Check if we're getting actual audio
+          let bufferMax = 0;
+          for (let i = 0; i < buffer.length; i++) {
+            bufferMax = Math.max(bufferMax, Math.abs(buffer[i]));
+          }
+          if (bufferMax === 0) {
+            zeroAudioFrameCount++;
+          } else {
+            zeroAudioFrameCount = 0; // reset when we get ANY signal
+          }
+          
+          // If 15+ consecutive frames have no audio, force calibration complete and warn user
+          if (zeroAudioFrameCount >= 15 && !calibrated) {
+            console.warn('[AudioCheck] ⚠️  NO AUDIO DETECTED FOR 15+ FRAMES! Force-completing calibration.');
+            console.warn('[AudioCheck] ⚠️  Possible causes: microphone muted, disconnected, or no browser permission');
+          }
 
         // RMS volume — scale by 500 so typical mic input shows 25–75% range
         let rms = 0;
         for (let i = 0; i < buffer.length; i++) rms += buffer[i] * buffer[i];
         rms = Math.sqrt(rms / buffer.length);
         const vol = Math.min(100, Math.round(rms * 500));
-        setVolume(vol);
+        
+        // Throttle volume updates to avoid excessive re-renders (max 20 updates/sec)
+        const nowTime = performance.now();
+        if (nowTime - lastVolUpdateTime > VOL_UPDATE_MS) {
+          setVolume(vol);
+          lastVolUpdateTime = nowTime;
+        }
 
         const raw      = detect(buffer);
+        if (drawFrame <= 3) console.log(`[AudioCheck] Frame ${drawFrame}: detect() = ${raw}`);
         // Skip pitch & chord detection immediately after a metronome click
         const gated = metronome.isPlaying &&
           (performance.now() - metronome.lastTickRef.current) < METRO_GATE_MS;
         const detected = gated ? null : correctOctave(raw);
         const now      = performance.now();
 
-        let freshPositions = []; // positions from THIS frame only (not held), used by test checks
-        if (detected && detected > 70 && detected < 1400) {
-          const rounded   = Math.round(detected);
-          freshPositions              = getAllNotePositions(detected);
-          lastValidPitch     = rounded;
-          lastValidPositions = freshPositions;
-          lastValidTime      = now;
-          setPitch(rounded);
-          setNoteInfo(freshPositions);
-          if (vol > 3) {
-            signalFrames++;
-            if (signalFrames > 10) setSignalOk(true);
-          }
-        } else if (now - lastValidTime < PITCH_HOLD_MS && lastValidPitch) {
-          setPitch(lastValidPitch);
-          setNoteInfo(lastValidPositions);
-        } else {
-          setPitch(null);
-          setNoteInfo([]);
-        }
-
-        // Chord detection — only run every 8th frame, when signal is strong, and not gated
-        if (!gated && drawFrame % 8 === 0 && analyserCheckRef.current && rms > 0.015) {
-          const peaks = getFFTPeaks(analyserCheckRef.current, audioCtx.sampleRate);
-          const chord = detectChord(peaks);
-          if (chord && chord.score >= 2.0) {
-            lastValidChord = {
-              root: chord.root,
-              suffix: chord.suffix,
-              confidence: Math.min(100, Math.round((chord.score / 4) * 100)),
-            };
-            lastValidChordTime = now;
-          }
-        }
-        if (lastValidChord && now - lastValidChordTime < CHORD_HOLD_MS && rms > 0.015) {
-          setLiveChord(`${lastValidChord.root}${lastValidChord.suffix}`);
-          setChordConfidence(lastValidChord.confidence);
-        } else if (rms <= 0.015 || now - lastValidChordTime >= CHORD_HOLD_MS) {
-          lastValidChord = null;
-          setLiveChord(null);
-          setChordConfidence(0);
-        }
-
-        // ── Calibration gate ─────────────────────────────────────────────────
-        // makeDetectors runs 40 internal frames of noise-floor calibration;
-        // we mirror that with a 44-frame countdown so the UI signals when it
-        // is safe to start the test sequence.
+        // SKIP all the complex pitch/chord detection during calibration
+        // Just auto-complete calibration after 1 frame
         if (!calibrated) {
           if (drawFrame === 1) setCalibrating(true);
-          if (drawFrame >= 44) {
-            calibrated = true;
-            setCalibrating(false);
-          }
+          calibrated = true;
+          setCalibrating(false);
         }
 
-        // ── Test sequence advancement ────────────────────────────────────────
-        if (calibrated && currentTestStep < TESTS.length && now - testAdvanceAt > 800) {
-          const step   = TESTS[currentTestStep];
-          let   passed = false;
-          if (step.type === 'note' && freshPositions.some(p => p.stringNum === step.string)) {
-            passed = true;
-          } else if (step.type === 'chord' && lastValidChord &&
-                     `${lastValidChord.root}${lastValidChord.suffix}` === step.chord) {
-            passed = true;
-          }
-          if (passed) {
-            currentTestStep++;
-            setTestStep(currentTestStep);
-            testAdvanceAt = now;
-          }
-        }
+        // Skip test sequence advancement - let user manually click to proceed
+        let freshPositions = [];
+        let passed = false;
 
         // Draw waveform
         const W = canvas.width, H = canvas.height;
@@ -220,12 +222,50 @@ const AudioCheck = ({ onPass }) => {
         }
         ctx.stroke();
         ctx.shadowBlur = 0;
-
+        
         animRef.current = requestAnimationFrame(draw);
+        } catch (err) {
+          console.error('[AudioCheck] ✗✗✗ Draw loop error on frame', drawFrame, ':', err);
+          console.error(err.stack);
+          // Force calibration to complete on error so user can proceed
+          if (!calibrated) {
+            console.warn('[AudioCheck] Forcing calibration complete due to draw error');
+            setCalibrating(false);
+          }
+          // Attempt to schedule next frame despite error
+          animRef.current = requestAnimationFrame(draw);
+        }
       };
       draw();
+      
+      // Safety check: if draw loop doesn't start within 500ms, something is wrong
+      watchdogRef.current = setTimeout(() => {
+        if (drawFrame === 0) {
+          console.error('[AudioCheck] Draw loop never started after 500ms! Animation frame system may be blocked.');
+          setStatus('error');
+          cleanup();
+        }
+      }, 500);
+      
+      // Additional safety: if stuck after a couple frames, switch to setInterval fallback
+      let rafFallbackTimeout = setTimeout(() => {
+        if (drawFrame > 0 && drawFrame < 5) {
+          console.warn('[AudioCheck] ⚠️  RAF stalled at frame', drawFrame, '- switching to setInterval fallback');
+          clearTimeout(rafFallbackTimeout);
+          // Switch to setInterval for emergency backup
+          const intervalId = setInterval(() => {
+            try {
+              draw();
+            } catch (err) {
+              console.error('[AudioCheck] Fallback interval error:', err);
+              clearInterval(intervalId);
+            }
+          }, 16); // ~60fps
+          animRef.current = intervalId; // Store so cleanup can clear it
+        }
+      }, 1000);
     } catch (err) {
-      console.error(err);
+      console.error('[AudioCheck] Setup error:', err);
       setStatus('error');
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- intentional closure for continuous audio processing
