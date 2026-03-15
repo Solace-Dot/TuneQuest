@@ -87,7 +87,10 @@ function AppContent() {
   useEffect(() => {
     if (!token) return;
     api.get('/api/ai/tokens/')
-      .then((res) => dispatch(setTokens(res.data.tokens_remaining)))
+      .then((res) => dispatch(setTokens({
+        tokensRemaining: res.data.tokens_remaining,
+        tokensLimit: res.data.tokens_limit
+      })))
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);

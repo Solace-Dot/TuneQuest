@@ -10,9 +10,10 @@ class AIToken(models.Model):
     )
     tokens_remaining = models.PositiveIntegerField(default=10)
     tokens_used = models.PositiveIntegerField(default=0)
+    tokens_limit = models.PositiveIntegerField(default=10, help_text="Max tokens capacity: 10 for free, 50 for premium")
 
     def __str__(self):
-        return f"{self.user.email} — {self.tokens_remaining} remaining"
+        return f"{self.user.email} — {self.tokens_remaining}/{self.tokens_limit}"
 
 
 class AIGeneratedQuiz(models.Model):

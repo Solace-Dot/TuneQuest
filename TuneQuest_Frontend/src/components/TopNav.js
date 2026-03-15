@@ -24,8 +24,11 @@ function TopNav() {
     if (token) {
       api
         .get("/api/ai/tokens/")
-        .then((res) => dispatch(setTokens(res.data.tokens_remaining)))
-        .catch(() => dispatch(setTokens(10)));
+        .then((res) => dispatch(setTokens({
+          tokensRemaining: res.data.tokens_remaining,
+          tokensLimit: res.data.tokens_limit
+        })))
+        .catch(() => dispatch(setTokens({ tokensRemaining: 10, tokensLimit: 10 })));
     }
   }, [token, dispatch]);
 

@@ -64,6 +64,7 @@ const aiPlanSlice = createSlice({
     exercises: [],         // Adapted for ExercisesPage
     quizzes: [],           // Adapted for QuizPage
     tokensRemaining: 10,
+    tokensLimit: 10,       // Max token capacity based on subscription status
     skillLevel: 'Beginner',   // From the form — used by song launcher
     instrument: 'Guitar',     // From the form — passed to song timeline API
     learningGoal: null,       // 'Performance Mastery' | 'Songwriting & Composition' | 'Boost Music Theory'
@@ -124,7 +125,13 @@ const aiPlanSlice = createSlice({
       state.quizCache[stepId] = { quizData, quizObject };
     },
     setTokens(state, action) {
-      state.tokensRemaining = action.payload;
+      // Can be a number (just tokensRemaining) or an object with tokensRemaining and tokensLimit
+      if (typeof action.payload === 'number') {
+        state.tokensRemaining = action.payload;
+      } else if (typeof action.payload === 'object') {
+        state.tokensRemaining = action.payload.tokensRemaining || state.tokensRemaining;
+        state.tokensLimit = action.payload.tokensLimit || state.tokensLimit;
+      }
     },
     clearPlan(state) {
       state.plan = null;

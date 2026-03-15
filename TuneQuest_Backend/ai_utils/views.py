@@ -10,7 +10,25 @@ from ai_utils.models import AIToken, AIGeneratedQuiz, AIQuizQuestion, AIGenerate
 from learn.models import Lesson
 from exercises.models import DailyPlan
 
-TOKEN_LIMIT = 10
+TOKEN_LIMIT_FREE = 10
+TOKEN_LIMIT_PREMIUM = 50
+
+
+def _get_token_limit_for_user(user):
+    """Determine token limit based on subscription status."""
+    if not user.is_authenticated:
+        return TOKEN_LIMIT_FREE
+    
+    from payments.models import Subscription
+    
+    subscription = Subscription.objects.filter(
+        user=user,
+        plan_type='premium',
+        subscription_status='active'
+    ).first()
+    
+    is_premium = subscription and subscription.is_active if subscription else False
+    return TOKEN_LIMIT_PREMIUM if is_premium else TOKEN_LIMIT_FREE
 
 
 def _build_ear_training_questions(num_questions=5):
@@ -532,24 +550,38 @@ def complete_practice_session(request):
 
 @api_view(['GET'])
 def get_token_balance(request):
-    """Return the user's remaining AI token count."""
+    """Return the user's remaining AI token count and limit."""
     # Allow unauthenticated requests - return default for guests
     if not request.user.is_authenticated:
         return JsonResponse({
             'tokens_remaining': 10,
             'tokens_used': 0,
-            'token_limit': TOKEN_LIMIT,
+            'tokens_limit': TOKEN_LIMIT_FREE,
             'is_guest': True,
         })
     
+    token_limit = _get_token_limit_for_user(request.user)
     token_obj, _ = AIToken.objects.get_or_create(
         user=request.user,
-        defaults={'tokens_remaining': TOKEN_LIMIT},
+        defaults={'tokens_remaining': token_limit, 'tokens_limit': token_limit},
     )
+    
+    # If user's token limit has changed (e.g., upgraded to premium), update it
+    if token_obj.tokens_limit != token_limit:
+        # If upgrading and tokens are at old limit, add the difference
+        if token_limit > token_obj.tokens_limit and token_obj.tokens_remaining == token_obj.tokens_limit:
+            token_obj.tokens_remaining += (token_limit - token_obj.tokens_limit)
+        # If downgrading and tokens exceed new limit, cap them at new limit
+        elif token_limit < token_obj.tokens_limit and token_obj.tokens_remaining > token_limit:
+            token_obj.tokens_remaining = token_limit
+        
+        token_obj.tokens_limit = token_limit
+        token_obj.save()
+    
     return JsonResponse({
         'tokens_remaining': token_obj.tokens_remaining,
         'tokens_used': token_obj.tokens_used,
-        'token_limit': TOKEN_LIMIT,
+        'tokens_limit': token_obj.tokens_limit,
         'is_guest': False,
     })
 
@@ -591,7 +623,7 @@ def generate_practice_plan(request):
     
     token_obj, _ = AIToken.objects.get_or_create(
         user=request.user,
-        defaults={'tokens_remaining': TOKEN_LIMIT},
+        defaults={'tokens_remaining': _get_token_limit_for_user(request.user), 'tokens_limit': _get_token_limit_for_user(request.user)},
     )
 
     if token_obj.tokens_remaining <= 0:
@@ -676,7 +708,7 @@ def generate_song_timeline(request):
     """
     token_obj, _ = AIToken.objects.get_or_create(
         user=request.user,
-        defaults={'tokens_remaining': TOKEN_LIMIT},
+        defaults={'tokens_remaining': _get_token_limit_for_user(request.user), 'tokens_limit': _get_token_limit_for_user(request.user)},
     )
     if token_obj.tokens_remaining <= 0:
         return JsonResponse(

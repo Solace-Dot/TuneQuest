@@ -35,7 +35,10 @@ function PracticePlanForm() {
   // Fetch token balance once on mount
   useEffect(() => {
     api.get('/api/ai/tokens/')
-      .then((res) => dispatch(setTokens(res.data.tokens_remaining)))
+      .then((res) => dispatch(setTokens({
+        tokensRemaining: res.data.tokens_remaining,
+        tokensLimit: res.data.tokens_limit
+      })))
       .catch(() => {});
   }, [dispatch]);
 

@@ -350,6 +350,25 @@ class PayPalCaptureOrderView(APIView):
                     },
                 )
 
+                # If payment is successful, upgrade AI tokens (add 40 to existing)
+                if capture_status == "COMPLETED":
+                    from ai_utils.models import AIToken
+                    
+                    token_obj, _ = AIToken.objects.get_or_create(
+                        user=request.user,
+                        defaults={'tokens_remaining': 50, 'tokens_limit': 50, 'tokens_used': 0},
+                    )
+                    
+                    # If user was on free tier (limit=10), add 40 tokens
+                    if token_obj.tokens_limit == 10:
+                        token_obj.tokens_remaining = min(token_obj.tokens_remaining + 40, 50)
+                    
+                    # Update token limit to premium
+                    token_obj.tokens_limit = 50
+                    token_obj.save()
+                    
+                    logger.info(f"Premium tokens upgraded for user {request.user.id}: {token_obj.tokens_remaining}/50")
+
                 logger.info(f"Payment processed: {capture_id} for user {request.user.id}, status: {capture_status}")
 
         except Exception as e:
