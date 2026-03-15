@@ -208,23 +208,26 @@ def cancel_subscription(request):
 def get_subscription_status(request):
     """Fetch current subscription status for authenticated user."""
     try:
+        # Get the most recent active premium subscription
         subscription = Subscription.objects.filter(
             user=request.user,
             plan_type='premium',
             subscription_status='active'
-        ).first()
+        ).order_by('-id').first()  # Get most recent by ID
         
         if subscription and subscription.is_active:
             return Response({
                 'subscription': 'premium',
                 'end_date': subscription.end_date,
                 'days_remaining': subscription.days_remaining,
+                'is_active': True,
             })
         else:
             return Response({
                 'subscription': 'free',
                 'end_date': None,
                 'days_remaining': None,
+                'is_active': False,
             })
     except Exception as e:
         logger.error(f"Error fetching subscription status: {str(e)}", exc_info=True)
@@ -232,6 +235,7 @@ def get_subscription_status(request):
             'subscription': 'free',
             'end_date': None,
             'days_remaining': None,
+            'is_active': False,
         })
 
 
@@ -375,6 +379,7 @@ class PayPalCaptureOrderView(APIView):
             )
 
         # Create/update subscription and payment records atomically
+        tokens_remaining = None  # Will be set after successful payment
         try:
             from datetime import timedelta
             from django.utils import timezone
@@ -384,27 +389,16 @@ class PayPalCaptureOrderView(APIView):
                 # Calculate end_date as 30 days from now
                 end_date = timezone.now() + timedelta(days=30)
                 
-                # Get or create subscription
-                subscription, _created = Subscription.objects.get_or_create(
+                # Create new subscription record (always create new for each purchase)
+                subscription = Subscription.objects.create(
                     user=request.user,
                     plan_type="premium",
-                    defaults={
-                        "subscription_status": "active" if capture_status == "COMPLETED" else "pending",
-                        "paypal_payer_id": payer_id,
-                        "paypal_subscription_id": order_id,
-                        "auto_renew": False,
-                        "end_date": end_date if capture_status == "COMPLETED" else None,
-                    },
+                    subscription_status="active" if capture_status == "COMPLETED" else "pending",
+                    paypal_payer_id=payer_id,
+                    paypal_subscription_id=order_id,
+                    auto_renew=False,
+                    end_date=end_date if capture_status == "COMPLETED" else None,
                 )
-
-                # Update subscription status
-                subscription.subscription_status = "active" if capture_status == "COMPLETED" else "pending"
-                subscription.paypal_payer_id = payer_id
-                subscription.paypal_subscription_id = order_id
-                subscription.auto_renew = False
-                if capture_status == "COMPLETED":
-                    subscription.end_date = end_date
-                subscription.save()
 
                 # Create payment record
                 Payment.objects.update_or_create(
@@ -417,7 +411,7 @@ class PayPalCaptureOrderView(APIView):
                         "status": capture_status.lower(),
                     },
                 )
-
+                
                 # If payment is successful, upgrade AI tokens (add 40 to existing)
                 if capture_status == "COMPLETED":
                     token_obj, created = AIToken.objects.get_or_create(
@@ -436,6 +430,7 @@ class PayPalCaptureOrderView(APIView):
                         token_obj.tokens_limit = 50
                     
                     token_obj.save()
+                    tokens_remaining = token_obj.tokens_remaining
                     
                     logger.info(f"Premium tokens upgraded for user {request.user.id}: {token_obj.tokens_remaining}/50")
 
@@ -454,4 +449,6 @@ class PayPalCaptureOrderView(APIView):
             "status": capture_status,
             "transactionId": capture_id,
             "payerEmail": payer_email,
+            "tokens_remaining": tokens_remaining if capture_status == "COMPLETED" else None,
+            "end_date": str(end_date) if capture_status == "COMPLETED" else None,
         })
