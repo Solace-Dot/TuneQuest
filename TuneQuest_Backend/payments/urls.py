@@ -1,6 +1,12 @@
 from django.urls import path
 
-from .views import (\n    PayPalCaptureOrderView,\n    PayPalConfigView,\n    PayPalCreateOrderView,\n    get_subscription_status,\n    cancel_subscription,\n)
+from .views import (
+    PayPalCaptureOrderView,
+    PayPalConfigView,
+    PayPalCreateOrderView,
+    get_subscription_status,
+    cancel_subscription,
+)
 
 urlpatterns = [
     path("paypal/config/", PayPalConfigView.as_view()),
