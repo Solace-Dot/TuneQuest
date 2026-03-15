@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 import pytz
 
-from .models import User
+from .models import User, UserProfile
 from .serializers import (
     RegisterSerializer,
     LoginSerializer,
