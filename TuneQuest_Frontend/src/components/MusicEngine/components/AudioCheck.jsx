@@ -492,13 +492,16 @@ const AudioCheck = ({ onPass }) => {
               )}
               {status === 'error' && (
                 <div className="text-center space-y-3">
-                  <p className="text-xs uppercase tracking-widest" style={{ color: '#ef4444' }}>Mic access denied or unavailable</p>
+                  <div style={{ background: 'rgba(239,68,68,0.1)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)', marginBottom: '16px' }}>
+                    <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#ef4444' }}>⚠️ Microphone Access Required</p>
+                    <p className="text-[11px] mb-0" style={{ color: '#ef4444', opacity: 0.8 }}>Please allow browser access to your microphone. Check browser permissions or try a different browser if issues persist.</p>
+                  </div>
                   <button
                     onClick={startCheck}
-                    className="btn text-xs tracking-widest uppercase"
-                    style={{ border: '1px solid rgba(239,68,68,0.4)', color: '#ef4444', padding: '10px 32px', borderRadius: '999px', background: 'transparent' }}
+                    className="btn btn-primary text-xs tracking-widest uppercase"
+                    style={{ padding: '10px 32px', borderRadius: '999px' }}
                   >
-                    Retry
+                    🔄 Request Permission Again
                   </button>
                 </div>
               )}

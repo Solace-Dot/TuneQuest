@@ -152,7 +152,16 @@ const ChatWindow = ({ onClose, activeTab, setActiveTab }) => {
             placeholder="Write your message..."
             className={styles.input}
           />
-          <button className={styles.sendBtn} aria-label="Send">
+          <button
+            className={styles.sendBtn}
+            aria-label="Send"
+            onClick={() => {
+              if (message.trim()) {
+                // For now, just clear the message. Backend chat integration would go here.
+                setMessage('');
+              }
+            }}
+          >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
             </svg>

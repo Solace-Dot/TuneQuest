@@ -91,6 +91,163 @@ def _recommended_slugs(plan: dict, skill_level: str) -> list:
     )
     return slugs
 
+
+def _create_learning_cards_from_plan(plan: dict, skill_level: str, instrument: str) -> list:
+    """Generate and create at least 10 learning cards based on the practice plan."""
+    import uuid
+    created_slugs = []
+    step_count = 0
+    
+    # Get existing lessons to avoid duplicates
+    existing_lessons = set(Lesson.objects.values_list('slug', flat=True))
+    
+    # Define learning objectives per category
+    category_topics = {
+        'Technique': [
+            'Basic Finger Placement', 'String Muting Techniques', 'Barre Chord Fundamentals',
+            'Fingerpicking Patterns', 'Palm Muting Techniques', 'Harmonic Techniques',
+            'Sweep Picking Intro', 'Vibrato and Expression', 'Dynamic Control', 'Alternate Picking Speed'
+        ],
+        'Rhythm': [
+            'Basic Time Signatures', 'Strumming Patterns', 'Eighth Note Grooves',
+            'Sixteenth Note Rhythms', 'Syncopation', 'Polyrhythms Intro', 'Triplet Feels',
+            'Swing Rhythms', 'Odd Time Signatures', 'Rhythm Handwriting'
+        ],
+        'Knowledge': [
+            'Major and Minor Scales', 'Chord Construction Basics', 'Intervals and Harmony',
+            'Music Theory Fundamentals', 'Key Signatures', 'Voice Leading Basics',
+            'Chord Progressions', 'Mode Theory Intro', 'Harmonic Function', 'Enharmonic Equivalents'
+        ],
+        'Repertoire': [
+            'Learning Simple Songs', 'Popular Rock Songs', 'Classic Standards',
+            'Acoustic Fingerstyle Songs', 'Blues Progressions', 'Jazz Standards Intro',
+            'Contemporary Hits', 'Classic Rock Riffs', 'Folk Song Adaptations', 'Song Analysis'
+        ],
+        'Ear Training': [
+            'Interval Recognition', 'Chord Quality Identification', 'Melodic Dictation',
+            'Rhythmic Dictation', 'Scale Identification', 'Perfect Pitch Training',
+            'Relative Pitch Development', 'Harmonic Ear Training', 'Note Recognition by Sound', 'Chord Progression Ear'
+        ]
+    }
+    
+    # Create learning cards for each step in the plan
+    for idx, step in enumerate(plan.get('steps', [])[:10]):  # Max 10 cards from plan steps
+        category = step.get('category', 'Knowledge')
+        title = step.get('title', f'Lesson {idx + 1}')
+        description = step.get('description', '')
+        duration = step.get('duration_minutes', 15)
+        
+        # Determine difficulty
+        difficulty = skill_level if skill_level in ['Beginner', 'Intermediate', 'Advanced'] else 'Beginner'
+        
+        # Create slug
+        unique_id = str(uuid.uuid4())[:8]
+        slug = f"ai-{category.lower().replace(' ', '-')}-{idx}-{unique_id}"[:20]
+        
+        # Skip if exists
+        if slug in existing_lessons:
+            continue
+        
+        # Create lesson content blocks
+        content = [
+            {
+                'type': 'heading',
+                'text': title
+            },
+            {
+                'type': 'paragaph',  
+                'text': description or f'Learn about {title.lower()} in {category.lower()}. This lesson covers essential concepts and practical applications for {instrument} players.'
+            },
+            {
+                'type': 'section',
+                'title': 'Key Points',
+                'items': [
+                    f'Understanding {title.lower()}',
+                    'Application techniques and practice methods',
+                    'Common mistakes and how to avoid them',
+                ]
+            }
+        ]
+        
+        try:
+            lesson = Lesson.objects.create(
+                slug=slug,
+                title=title,
+                category=_map_category_to_lesson_category(category),
+                difficulty=difficulty,
+                duration_minutes=min(duration, 60),
+                description=description or f'An AI-generated lesson on {title.lower()}',
+                content=content,
+                order=step_count
+            )
+            created_slugs.append(lesson.slug)
+            step_count += 1
+        except Exception as e:
+            print(f"Error creating lesson {slug}: {e}")
+            continue
+    
+    # If we have fewer than 10 cards, add more from the category templates
+    while step_count < 10:
+        for category, topics in category_topics.items():
+            if step_count >= 10:
+                break
+            
+            for topic in topics:
+                if step_count >= 10:
+                    break
+                
+                # Generate slug
+                unique_id = str(uuid.uuid4())[:8]
+                slug = f"ai-{category.lower().replace(' ', '-')}-{step_count}-{unique_id}"[:25]
+                
+                if slug in existing_lessons or slug in created_slugs:
+                    continue
+                
+                lesson_cat = _map_category_to_lesson_category(category)
+                difficulty = skill_level if skill_level in ['Beginner', 'Intermediate', 'Advanced'] else 'Beginner'
+                
+                content = [
+                    {'type': 'heading', 'text': topic},
+                    {'type': 'paragraph', 'text': f'Master {topic.lower()} for {instrument}. This AI-generated lesson provides structured learning and practice guidance.'},
+                    {'type': 'section', 'title': 'Learning Objectives', 'items': [
+                        f'Understand {topic.lower()}',
+                        'Practice fundamental techniques',
+                        'Apply knowledge in practical scenarios'
+                    ]}
+                ]
+                
+                try:
+                    lesson = Lesson.objects.create(
+                        slug=slug,
+                        title=topic,
+                        category=lesson_cat,
+                        difficulty=difficulty,
+                        duration_minutes=20,
+                        description=f'An AI-generated lesson on {topic.lower()}',
+                        content=content,
+                        order=step_count
+                    )
+                    created_slugs.append(lesson.slug)
+                    step_count += 1
+                except Exception as e:
+                    print(f"Error creating lesson {slug}: {e}")
+                    continue
+    
+    return created_slugs[:10]  # Return only first 10
+
+
+def _map_category_to_lesson_category(category: str) -> str:
+    """Map practice plan category to lesson category."""
+    mapping = {
+        'Technique': 'Chords',
+        'Rhythm': 'Rhythm',
+        'Knowledge': 'Music Theory',
+        'Repertoire': 'Scales',
+        'Ear Training': 'Ear Training',
+        'Quizzes': 'Music Theory',
+    }
+    return mapping.get(category, 'Music Theory')
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def generate_quiz(request):
@@ -434,6 +591,9 @@ def generate_practice_plan(request):
             practice_data.get('user_context', {}).get('skill_level', 'Beginner')
         )
         recommended_slugs = _recommended_slugs(plan, skill_level)
+        
+        # Create AI-generated learning cards based on the plan
+        ai_generated_learning_slugs = _create_learning_cards_from_plan(plan, skill_level, instrument)
 
         # Persist plan to DB so it survives page reloads
         focus_areas = practice_data.get('focus_areas', []) if isinstance(practice_data, dict) else []
@@ -446,7 +606,7 @@ def generate_practice_plan(request):
             plan_json=plan,
             skill_level=skill_level,
             instrument=instrument or 'Guitar',
-            recommended_lesson_slugs=recommended_slugs,
+            recommended_lesson_slugs=recommended_slugs + ai_generated_learning_slugs,
         )
 
         token_obj.tokens_remaining -= 1
@@ -457,7 +617,8 @@ def generate_practice_plan(request):
             'success': True,
             'plan': plan,
             'plan_id': str(daily_plan.id),
-            'recommended_lesson_slugs': recommended_slugs,
+            'recommended_lesson_slugs': recommended_slugs + ai_generated_learning_slugs,
+            'ai_generated_lesson_slugs': ai_generated_learning_slugs,
             'tokens_remaining': token_obj.tokens_remaining,
         })
 
@@ -683,7 +844,7 @@ def delete_quiz(request, quiz_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@api_view(['POST'])
+@api_view(['POST', 'GET'])
 @permission_classes([IsAuthenticated])
 def generate_detailed_progress_summary(request):
     """
@@ -709,9 +870,9 @@ def generate_detailed_progress_summary(request):
         # Get user profile info
         from accounts.models import UserProfile
         user_profile = UserProfile.objects.filter(user=request.user).first()
-        instrument = user_profile.instrument if user_profile else 'Guitar'
-        skill_level = user_profile.skill_level if user_profile else 'Beginner'
-        learning_goal = user_profile.learning_goal if user_profile else ''
+        instrument = user_profile.instrument_name if user_profile and user_profile.instrument_name else 'Guitar'
+        skill_level = user_profile.skill_level if user_profile and user_profile.skill_level else 'Beginner'
+        learning_goal = user_profile.learning_goal_text if user_profile and user_profile.learning_goal_text else ''
 
         # Get all exercises from latest plan
         latest_plan = DailyPlan.objects.filter(user=request.user).order_by('-created_at').first()
