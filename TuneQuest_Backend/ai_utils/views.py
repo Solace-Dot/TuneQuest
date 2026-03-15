@@ -148,24 +148,26 @@ def _create_learning_cards_from_plan(plan: dict, skill_level: str, instrument: s
         if slug in existing_lessons:
             continue
         
-        # Create lesson content blocks
+        # Create lesson content blocks with frontend-compatible format
         content = [
             {
-                'type': 'heading',
-                'text': title
+                'type': 'text',
+                'heading': 'Overview',
+                'body': description or f'Learn about {title.lower()} in {category.lower()}. This lesson covers essential concepts and practical applications for {instrument} players.'
             },
             {
-                'type': 'paragaph',  
-                'text': description or f'Learn about {title.lower()} in {category.lower()}. This lesson covers essential concepts and practical applications for {instrument} players.'
+                'type': 'text',
+                'heading': 'Learning Objectives',
+                'body': f'By the end of this lesson, you will be able to:\n• Understand the fundamentals of {title.lower()}\n• Apply these concepts in practical scenarios\n• Practice and master the core techniques'
             },
             {
-                'type': 'section',
-                'title': 'Key Points',
-                'items': [
-                    f'Understanding {title.lower()}',
-                    'Application techniques and practice methods',
-                    'Common mistakes and how to avoid them',
-                ]
+                'type': 'tip',
+                'body': f'💡 Pro Tip: Start slowly and focus on accuracy before speed. Consistent practice of {title.lower()} will significantly improve your {instrument} playing skills.'
+            },
+            {
+                'type': 'text',
+                'heading': 'Key Points to Remember',
+                'body': '• Understanding the fundamentals is crucial\n• Practice regularly to build muscle memory\n• Apply techniques in real musical contexts\n• Don\'t rush—quality practice beats rushed sessions'
             }
         ]
         
@@ -207,13 +209,10 @@ def _create_learning_cards_from_plan(plan: dict, skill_level: str, instrument: s
                 difficulty = skill_level if skill_level in ['Beginner', 'Intermediate', 'Advanced'] else 'Beginner'
                 
                 content = [
-                    {'type': 'heading', 'text': topic},
-                    {'type': 'paragraph', 'text': f'Master {topic.lower()} for {instrument}. This AI-generated lesson provides structured learning and practice guidance.'},
-                    {'type': 'section', 'title': 'Learning Objectives', 'items': [
-                        f'Understand {topic.lower()}',
-                        'Practice fundamental techniques',
-                        'Apply knowledge in practical scenarios'
-                    ]}
+                    {'type': 'text', 'heading': 'Overview', 'body': f'Master {topic.lower()} for {instrument}. This AI-generated lesson provides structured learning and practice guidance.'},
+                    {'type': 'text', 'heading': 'What You\'ll Learn', 'body': f'In this lesson, you will:\n• Understand the core concepts of {topic.lower()}\n• Develop practical skills through guided exercises\n• Apply these concepts to real musical situations\n• Build confidence and proficiency step by step'},
+                    {'type': 'tip', 'body': f'🎯 Focus Area: This lesson emphasizes {topic.lower()} which is essential for {instrument} players at the {difficulty} level.'},
+                    {'type': 'text', 'heading': 'Practice Tips', 'body': 'Break the lesson into small, manageable sections\nPractice each section until comfortable\nCombine sections into a complete practice routine\nReview regularly to reinforce learning'}
                 ]
                 
                 try:
@@ -558,7 +557,38 @@ def get_token_balance(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def generate_practice_plan(request):
-    """Generate an AI practice plan, costing 1 token."""
+    """Generate an AI practice plan, costing 1 token.
+    
+    Free tier users limited to 3 regenerations per month.
+    Premium tier users unlimited regenerations.
+    """
+    from payments.models import Subscription
+    from datetime import datetime
+    
+    # Check if user is free tier and has exceeded regeneration limit
+    subscription = Subscription.objects.filter(
+        user=request.user,
+        plan_type='premium',
+        subscription_status='active'
+    ).first()
+    
+    is_premium = subscription and subscription.is_active if subscription else False
+    
+    if not is_premium:
+        # Free tier: check regeneration limit (3 per month)
+        from django.utils import timezone
+        current_month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        plans_this_month = DailyPlan.objects.filter(
+            user=request.user,
+            created_at__gte=current_month_start
+        ).count()
+        
+        if plans_this_month >= 3:
+            return JsonResponse(
+                {'error': 'Free tier limited to 3 practice plans per month. Upgrade to premium for unlimited plans.'},
+                status=402,
+            )
+    
     token_obj, _ = AIToken.objects.get_or_create(
         user=request.user,
         defaults={'tokens_remaining': TOKEN_LIMIT},

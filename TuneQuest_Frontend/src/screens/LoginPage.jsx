@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { Container, Row, Col } from "react-bootstrap";
 import { loginSuccess, setError as setAuthError } from "../redux/slices/authSlice";
+import { setInstrument, setSkillLevel } from "../redux/slices/profileSlice";
 import { fetchProfileWithToken, loginUser } from "../api/client";
 import styles from "../styles/screens/AuthPage.module.css";
 
@@ -28,6 +29,17 @@ function LoginPage() {
 
       const user = await fetchProfileWithToken(token);
       dispatch(loginSuccess({ token, user, subscription: "free" }));
+      
+      // Restore profile data from the user object
+      if (user?.profile) {
+        if (user.profile.instrument_name) {
+          dispatch(setInstrument(user.profile.instrument_name));
+        }
+        if (user.profile.skill_level) {
+          dispatch(setSkillLevel(user.profile.skill_level));
+        }
+      }
+      
       navigate("/dashboard");
     } catch (err) {
       const detail =

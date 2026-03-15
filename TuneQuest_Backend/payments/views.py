@@ -310,6 +310,12 @@ class PayPalCaptureOrderView(APIView):
         # Create/update subscription and payment records atomically
         try:
             with transaction.atomic():
+                from datetime import timedelta
+                from django.utils import timezone
+                
+                # Calculate end_date as 30 days from now
+                end_date = timezone.now() + timedelta(days=30)
+                
                 # Get or create subscription
                 subscription, _created = Subscription.objects.get_or_create(
                     user=request.user,
@@ -319,6 +325,7 @@ class PayPalCaptureOrderView(APIView):
                         "paypal_payer_id": payer_id,
                         "paypal_subscription_id": order_id,
                         "auto_renew": False,
+                        "end_date": end_date if capture_status == "COMPLETED" else None,
                     },
                 )
 
@@ -327,6 +334,8 @@ class PayPalCaptureOrderView(APIView):
                 subscription.paypal_payer_id = payer_id
                 subscription.paypal_subscription_id = order_id
                 subscription.auto_renew = False
+                if capture_status == "COMPLETED":
+                    subscription.end_date = end_date
                 subscription.save()
 
                 # Create payment record

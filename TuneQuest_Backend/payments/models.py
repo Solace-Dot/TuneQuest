@@ -22,9 +22,30 @@ class Subscription(models.Model):
     auto_renew = models.BooleanField(default=True)
     start_date = models.DateTimeField(auto_now_add=True)
     end_date = models.DateTimeField(blank=True, null=True)
+    purchase_date = models.DateTimeField(auto_now_add=True, help_text="Date when subscription was purchased")
 
     def __str__(self):
         return f"{self.user.email} - {self.plan_type}"
+    
+    @property
+    def is_active(self):
+        """Check if subscription is currently active (not expired)."""
+        from django.utils import timezone
+        now = timezone.now()
+        # If no end_date, consider it active if subscription_status is 'active'
+        if self.end_date is None:
+            return self.subscription_status == 'active'
+        return self.subscription_status == 'active' and now < self.end_date
+    
+    @property
+    def days_remaining(self):
+        """Calculate days remaining until expiry."""
+        from django.utils import timezone
+        from datetime import timedelta
+        now = timezone.now()
+        if self.end_date is None or now > self.end_date:
+            return 0
+        return (self.end_date - now).days
 
 class Payment(models.Model):
     subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE)

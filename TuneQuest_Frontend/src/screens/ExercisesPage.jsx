@@ -50,7 +50,6 @@ function getWeeksElapsed(planStartDate) {
 }
 
 const DISCIPLINES = [
-  "Quizzes",
   "Technique",
   "Rhythm",
   "Knowledge",
@@ -59,7 +58,6 @@ const DISCIPLINES = [
 ];
 
 const CATEGORY_ICONS = {
-  Quizzes: "📝",
   Technique: "🎸",
   Rhythm: "🥁",
   Knowledge: "📚",
@@ -103,18 +101,8 @@ const isSongRoute = (routeTo, category) => {
 
 const categoryPromptByQuizType = {
   "Knowledge": "Create a study-phase quiz focused on recognition, maps, and concept clarity.",
-  "Quizzes": "Create a validation quiz using multiple-choice and term/scale-degree checks.",
   "Ear Training": "Create an ear-training quiz focused on listening-based identification tasks.",
 };
-
-function getMasterySeals(exercises) {
-  return DISCIPLINES.map((cat) => ({
-    category: cat,
-    unlocked: exercises.some(
-      (ex) => ex.category === cat && ex.status === "Completed"
-    ),
-  }));
-}
 
 function ExercisesPage() {
   const navigate = useNavigate();
@@ -142,7 +130,6 @@ function ExercisesPage() {
   const exercises = aiExercises;
   const completedCount = exercises.filter((ex) => ex.status === "Completed").length;
   const SLOT_LIMIT_DISPLAY = 5;
-  const masterySeals = getMasterySeals(exercises);
 
   // Auto-save exercises to backend with debounce
   useEffect(() => {
@@ -515,29 +502,6 @@ function ExercisesPage() {
                 ⚠ Slot limit reached — archive an exercise to continue
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Mastery Seal Tracker */}
-        <div className={`card ${styles.sealCard}`}>
-          <div className={styles.sealHeader}>
-            <span className={styles.sealTitle}>Mastery Seals</span>
-            <span className={styles.sealSubtitle}>
-              Defeat a Category Boss to unlock each seal
-            </span>
-          </div>
-          <div className={styles.seals}>
-            {masterySeals.map(({ category, unlocked }) => (
-              <div
-                key={category}
-                className={styles.seal}
-                data-unlocked={unlocked ? "true" : "false"}
-              >
-                <div className={styles.sealIcon}>{CATEGORY_ICONS[category]}</div>
-                <div className={styles.sealLabel}>{category}</div>
-                {unlocked && <div className={styles.sealGlow} />}
-              </div>
-            ))}
           </div>
         </div>
 
