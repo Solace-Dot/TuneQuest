@@ -1,10 +1,39 @@
 from django.urls import path
-from .views import ask_gemini, quiz_generator, project_plan_generator, progress_analyzer
+from .views import (
+    HealthCheckView,
+    QuizGenerateView,
+    PracticePlanGenerateView,
+    ProgressAnalyzeView,
+)
+
+app_name = "ai"
 
 urlpatterns = [
-    path("ask/", ask_gemini),
+    # ── Health ─────────────────────────────────────────────
+    path(
+        "health/",
+        HealthCheckView.as_view(),
+        name="health-check",
+    ),
 
-    path('quiz_generator/', quiz_generator),
-    path('project_plan_generator/', project_plan_generator),
-    path('progress_analyzer/', progress_analyzer),
+    # ── Quiz ───────────────────────────────────────────────
+    path(
+        "quiz/generate/",
+        QuizGenerateView.as_view(),
+        name="quiz-generate",
+    ),
+
+    # ── Practice Plan ──────────────────────────────────────
+    path(
+        "plan/generate/",
+        PracticePlanGenerateView.as_view(),
+        name="plan-generate",
+    ),
+
+    # ── Progress Analysis ──────────────────────────────────
+    path(
+        "progress/analyze/",
+        ProgressAnalyzeView.as_view(),
+        name="progress-analyze",
+    ),
 ]
