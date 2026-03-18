@@ -397,9 +397,6 @@ export default function SongTimelinePlayer({
 
           const gated = metronome.isPlaying &&
             (performance.now() - metronome.lastTickRef.current) < METRO_GATE_MS;
-          if (gated && drawFrame % 64 === 0) {
-            console.log('🔇 Metronome gating active - suppressing detection');
-          }
           const raw = detect(buffer);
           const detected = gated ? null : correctOctave(raw);
           const now = performance.now();
@@ -453,8 +450,8 @@ export default function SongTimelinePlayer({
         };
 
         micTickRef.current = requestAnimationFrame(loop);
-      } catch (err) {
-        console.error('Mic grading error:', err);
+      } catch (_err) {
+        // mic grading initialization failed
       }
     };
 
@@ -557,18 +554,13 @@ export default function SongTimelinePlayer({
                 livePositionsRef.current.some((pos) => pos.noteLabel === entry.noteLabel) ||
                 (pitch > 0 && Math.abs(1200 * Math.log2(pitch / entry.hz)) < 100)
               );
-              console.log('🎶 Note check:', { pillNote: pill.event.value, livePitch: pitch.toFixed(1), positions: livePositionsRef.current.map(p => p.noteLabel), matched: matchedPitch });
               if (matchedPitch) markPillHit(pill);
             }
 
             if (!pill._graded && pill.event?.type === 'chord') {
               const chordName = Array.isArray(pill.event.value) ? pill.event.value[0] : pill.event.value;
               const matchedChord = liveChordRef.current === chordName && liveChordScoreRef.current >= 2.5;
-              if (!matchedChord) {
-                console.log('🎵 Chord pill mismatch:', { expected: chordName, detected: liveChordRef.current, score: liveChordScoreRef.current.toFixed(2), scoreOk: liveChordScoreRef.current >= 2.5 });
-              }
               if (matchedChord) {
-                console.log('✨ CHORD HIT:', chordName);
                 markPillHit(pill);
               }
             }

@@ -63,8 +63,8 @@ export function useRecorder() {
       processor.connect(audioContext.destination);
 
       setIsRecording(true);
-    } catch (error) {
-      console.error("Error starting recording:", error);
+    } catch (_error) {
+      // start failed silently; permissionError is set by requestStream
     }
   };
 

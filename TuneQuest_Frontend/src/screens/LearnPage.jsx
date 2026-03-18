@@ -253,8 +253,7 @@ function LearnPage() {
   async function handleClearLessons() {
     setClearLoading(true);
     try {
-      const res = await api.post("/api/learn/lessons/clear_ai_lessons/");
-      console.log("Clear response:", res.data);
+      await api.post("/api/learn/lessons/clear_ai_lessons/");
       
       // Immediately clear state
       setLessons([]);
@@ -265,16 +264,14 @@ function LearnPage() {
       setTimeout(async () => {
         try {
           const refreshRes = await api.get("/api/learn/lessons/");
-          console.log("Refreshed lessons after clear:", refreshRes.data?.length || 0);
           setLessons(Array.isArray(refreshRes.data) ? refreshRes.data : []);
-        } catch (err) {
-          console.error("Failed to refresh lessons after clear:", err);
+        } catch (_err) {
+          // refresh failed silently
         } finally {
           setClearLoading(false);
         }
       }, 500);
-    } catch (err) {
-      console.error("Failed to clear lessons:", err);
+    } catch (_err) {
       setClearLoading(false);
     }
   }

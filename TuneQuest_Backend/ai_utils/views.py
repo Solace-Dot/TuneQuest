@@ -2,7 +2,7 @@
 from django.http import JsonResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 import json
 from ai_utils.quiz_generator import QuizGenerator
 from ai_utils.practice_plan_generator import PracticePlanGenerator
@@ -275,7 +275,7 @@ def _map_category_to_lesson_category(category: str) -> str:
     return mapping.get(category, 'Music Theory')
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def generate_quiz(request):
     """Single-request AI function calling - detects quiz request and stops (1 RPM)"""
     try:
@@ -316,7 +316,7 @@ def generate_quiz(request):
         }, status=500)
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def create_quiz(request):
     """Create quiz from detected function call - saves to database"""
     try:
@@ -566,19 +566,10 @@ def complete_practice_session(request):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_token_balance(request):
     """Return the user's remaining AI token count and limit."""
     from rest_framework.response import Response
-    
-    # Allow unauthenticated requests - return default for guests
-    if not request.user.is_authenticated:
-        return Response({
-            'tokens_remaining': 10,
-            'tokens_used': 0,
-            'tokens_limit': TOKEN_LIMIT_FREE,
-            'is_guest': True,
-        })
     
     token_limit = _get_token_limit_for_user(request.user)
     token_obj, created = AIToken.objects.get_or_create(

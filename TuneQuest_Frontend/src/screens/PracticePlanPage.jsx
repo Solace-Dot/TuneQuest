@@ -135,8 +135,7 @@ function PracticePlanPage() {
           const res = await api.get('/api/exercises/plans/regen-count/');
           setRemainingRegens(res.data.regenerations_remaining);
         }
-      } catch (err) {
-        console.error('Failed to fetch regeneration count:', err);
+      } catch (_err) {
         setRemainingRegens(3); // Default fallback
       }
     };

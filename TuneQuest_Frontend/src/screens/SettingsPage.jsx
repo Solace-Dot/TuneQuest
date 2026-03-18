@@ -159,8 +159,8 @@ function SettingsPage() {
             setPremiumEndDate(endDate);
             setDaysRemaining(res.data.days_remaining);
           }
-        } catch (err) {
-          console.error('Failed to fetch subscription details:', err);
+        } catch (_err) {
+          // ignore subscription detail fetch failures
         }
       }
     };

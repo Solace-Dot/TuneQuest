@@ -155,7 +155,7 @@ const MusicalGame = () => {
     guitarSamplerRef.current = null;
     Soundfont.instrument(playbackContext, 'acoustic_guitar_steel').then(guitar => {
       guitarSamplerRef.current = guitar;
-    }).catch(err => console.warn('Guitar sampler failed to load:', err));
+    }).catch(() => {});
 
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, highpassFilter: false },
@@ -184,7 +184,7 @@ const MusicalGame = () => {
     let audioContext, analyser;
     try {
       ({ audioContext, analyser } = await setupAudio(4096));
-    } catch (err) { console.error('Mic error:', err); return; }
+    } catch (_err) { return; }
 
     // Gate mic detection for 120 ms after each metronome click transient
     const METRO_GATE_MS  = 120;
@@ -361,7 +361,7 @@ const MusicalGame = () => {
     let audioContext, analyser;
     try {
       ({ audioContext, analyser } = await setupAudio(8192));
-    } catch (err) { console.error('Mic error:', err); return; }
+    } catch (_err) { return; }
 
     // Gate mic detection for 120 ms after each metronome click transient
     const METRO_GATE_MS  = 120;
@@ -515,9 +515,7 @@ const MusicalGame = () => {
 
   useEffect(() => () => {
     if (appRef.current) {
-      try { appRef.current.destroy(true, { children: true, texture: true, baseTexture: true }); } catch (err) {
-        console.warn('PIXI cleanup error (safe to ignore):', err);
-      }
+      try { appRef.current.destroy(true, { children: true, texture: true, baseTexture: true }); } catch (_err) {}
     }
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (requestRef.current) cancelAnimationFrame(requestRef.current);

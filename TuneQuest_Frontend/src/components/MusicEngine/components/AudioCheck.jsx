@@ -86,13 +86,11 @@ const AudioCheck = ({ onPass }) => {
       const buffer = new Float32Array(analyser.fftSize);
       const canvas = canvasRef.current;
       if (!canvas) {
-        console.error('[AudioCheck] Canvas ref is null!');
         setStatus('error');
         return;
       }
       const ctx    = canvas.getContext('2d');
       if (!ctx) {
-        console.error('[AudioCheck] Canvas context 2d failed!');
         setStatus('error');
         return;
       }
@@ -122,7 +120,6 @@ const AudioCheck = ({ onPass }) => {
       const draw = () => {
         try {
           if (drawFrame === 0) {
-            console.log('[AudioCheck] Draw loop started');
             // Kill the startup watchdog since draw is now running
             if (watchdogRef.current) {
               clearTimeout(watchdogRef.current);
@@ -133,7 +130,6 @@ const AudioCheck = ({ onPass }) => {
           
           // CRITICAL: Check if analyser still exists (React might have unmounted it)
           if (!analyserCheckRef.current) {
-            console.error('[AudioCheck] ✗✗✗ ANALYSER LOST! Component may have unmounted.');
             return;
           }
           
@@ -148,12 +144,6 @@ const AudioCheck = ({ onPass }) => {
             zeroAudioFrameCount++;
           } else {
             zeroAudioFrameCount = 0; // reset when we get ANY signal
-          }
-          
-          // If 15+ consecutive frames have no audio, force calibration complete and warn user
-          if (zeroAudioFrameCount >= 15 && !calibrated) {
-            console.warn('[AudioCheck] ⚠️  NO AUDIO DETECTED FOR 15+ FRAMES! Force-completing calibration.');
-            console.warn('[AudioCheck] ⚠️  Possible causes: microphone muted, disconnected, or no browser permission');
           }
 
         // RMS volume — scale by 500 so typical mic input shows 25–75% range
@@ -170,7 +160,6 @@ const AudioCheck = ({ onPass }) => {
         }
 
         const raw      = detect(buffer);
-        if (drawFrame <= 3) console.log(`[AudioCheck] Frame ${drawFrame}: detect() = ${raw}`);
         // Skip pitch & chord detection immediately after a metronome click
         const gated = metronome.isPlaying &&
           (performance.now() - metronome.lastTickRef.current) < METRO_GATE_MS;
@@ -225,11 +214,8 @@ const AudioCheck = ({ onPass }) => {
         
         animRef.current = requestAnimationFrame(draw);
         } catch (err) {
-          console.error('[AudioCheck] ✗✗✗ Draw loop error on frame', drawFrame, ':', err);
-          console.error(err.stack);
           // Force calibration to complete on error so user can proceed
           if (!calibrated) {
-            console.warn('[AudioCheck] Forcing calibration complete due to draw error');
             setCalibrating(false);
           }
           // Attempt to schedule next frame despite error
@@ -241,7 +227,6 @@ const AudioCheck = ({ onPass }) => {
       // Safety check: if draw loop doesn't start within 500ms, something is wrong
       watchdogRef.current = setTimeout(() => {
         if (drawFrame === 0) {
-          console.error('[AudioCheck] Draw loop never started after 500ms! Animation frame system may be blocked.');
           setStatus('error');
           cleanup();
         }
@@ -250,22 +235,19 @@ const AudioCheck = ({ onPass }) => {
       // Additional safety: if stuck after a couple frames, switch to setInterval fallback
       let rafFallbackTimeout = setTimeout(() => {
         if (drawFrame > 0 && drawFrame < 5) {
-          console.warn('[AudioCheck] ⚠️  RAF stalled at frame', drawFrame, '- switching to setInterval fallback');
           clearTimeout(rafFallbackTimeout);
           // Switch to setInterval for emergency backup
           const intervalId = setInterval(() => {
             try {
               draw();
-            } catch (err) {
-              console.error('[AudioCheck] Fallback interval error:', err);
+            } catch (_err) {
               clearInterval(intervalId);
             }
           }, 16); // ~60fps
           animRef.current = intervalId; // Store so cleanup can clear it
         }
       }, 1000);
-    } catch (err) {
-      console.error('[AudioCheck] Setup error:', err);
+    } catch (_err) {
       setStatus('error');
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- intentional closure for continuous audio processing

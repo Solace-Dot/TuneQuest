@@ -42,8 +42,8 @@ function LoginPage() {
           // Update Redux with actual subscription
           dispatch(setSubscription('premium'));
         }
-      } catch (err) {
-        console.log('Could not fetch subscription status, using free tier default');
+      } catch (_err) {
+        // subscription fetch failed; keep free tier default
       }
       
       if (user?.profile) {
@@ -61,9 +61,8 @@ function LoginPage() {
         if (completionRes.data) {
           dispatch(setProfileCompletion(completionRes.data));
         }
-      } catch (err) {
+      } catch (_err) {
         // Silently ignore profile completion fetch errors
-        console.log('Could not fetch profile completion status');
       }
       
       navigate("/dashboard");
