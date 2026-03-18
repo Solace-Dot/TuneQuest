@@ -33,13 +33,14 @@ function RegisterPage() {
         password: form.password,
       });
       const token = tokens?.access;
+      const refresh = tokens?.refresh;
 
       if (!token) {
         throw new Error("No access token returned from registration.");
       }
 
       const user = await fetchProfileWithToken(token);
-      dispatch(registerSuccess({ token, user, subscription: "free" }));
+      dispatch(registerSuccess({ token, refresh, user, subscription: "free" }));
       navigate("/dashboard");
     } catch (err) {
       const firstFieldError =

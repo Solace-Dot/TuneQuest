@@ -23,6 +23,7 @@ function LoginPage() {
         password: form.password,
       });
       const token = tokens?.access;
+      const refresh = tokens?.refresh;
 
       if (!token) {
         throw new Error("No access token returned from login.");
@@ -31,7 +32,7 @@ function LoginPage() {
       const user = await fetchProfileWithToken(token);
       
       // Save token to localStorage and Redux first (so interceptor can use it)
-      dispatch(loginSuccess({ token, user, subscription: "free" }));
+      dispatch(loginSuccess({ token, refresh, user, subscription: "free" }));
       
       // NOW fetch actual subscription status (token is in localStorage, interceptor will add it)
       let actualSubscription = "free";
