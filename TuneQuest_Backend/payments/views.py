@@ -49,10 +49,6 @@ def _paypal_base_url():
 
 def _paypal_client_credentials():
     """Retrieve PayPal client credentials from settings."""
-    # In mock mode, return dummy credentials
-    if getattr(settings, 'PAYPAL_MOCK_MODE', False):
-        return "mock_client_id", "mock_secret"
-    
     client_id = settings.PAYPAL_CLIENT_ID
     secret = settings.PAYPAL_SECRET
     
@@ -65,11 +61,6 @@ def _paypal_client_credentials():
 
 def _paypal_access_token():
     """Obtain OAuth2 access token from PayPal."""
-    # Return mock token in mock mode
-    if getattr(settings, 'PAYPAL_MOCK_MODE', False):
-        logger.info("Mock mode: Returning test access token")
-        return "mock_test_token_" + os.urandom(16).hex()
-    
     try:
         client_id, secret = _paypal_client_credentials()
         response = requests.post(
@@ -96,54 +87,6 @@ def _paypal_access_token():
 
 def _paypal_request(method, endpoint, payload=None):
     """Make authenticated request to PayPal API."""
-    # Handle mock mode
-    if getattr(settings, 'PAYPAL_MOCK_MODE', False):
-        logger.info(f"Mock mode: {method} {endpoint}")
-        
-        # Mock order creation
-        if method == "POST" and endpoint == "/v2/checkout/orders":
-            return {
-                "id": f"MOCK_{uuid.uuid4().hex[:16].upper()}",
-                "status": "CREATED",
-                "intent": "CAPTURE",
-                "purchase_units": payload.get("purchase_units", [])
-            }
-        
-        # Mock order capture
-        elif method == "POST" and "/capture" in endpoint:
-            order_id = endpoint.split("/")[5]  # Extract order_id from path
-            return {
-                "id": order_id,
-                "status": "COMPLETED",
-                "intent": "CAPTURE",
-                "payer": {
-                    "email_address": "test@example.com",
-                    "payer_id": "MOCK_PAYER_ID",
-                    "name": {
-                        "given_name": "Test",
-                        "surname": "User"
-                    }
-                },
-                "purchase_units": [
-                    {
-                        "payments": {
-                            "captures": [
-                                {
-                                    "id": f"MOCK_CAPTURE_{uuid.uuid4().hex[:8].upper()}",
-                                    "status": "COMPLETED",
-                                    "amount": {
-                                        "currency_code": settings.PAYPAL_CURRENCY,
-                                        "value": str(settings.PAYPAL_PREMIUM_PRICE)
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                ]
-            }
-        
-        return {}
-    
     try:
         token = _paypal_access_token()
         response = requests.request(
@@ -276,17 +219,12 @@ class PayPalConfigView(APIView):
 
     def get(self, request):
         """Return PayPal client configuration."""
-        is_mock_mode = getattr(settings, 'PAYPAL_MOCK_MODE', False)
         client_id = settings.PAYPAL_CLIENT_ID
         
-        # In mock mode, use a test client ID
-        if is_mock_mode:
-            client_id = "test-client-id-mock"
-            logger.info("PayPal config in MOCK MODE")
-        elif not client_id:
-            logger.warning("PayPal config requested but client_id not configured")
+        if not client_id:
+            logger.error("PayPal client_id not configured")
             return Response(
-                {"detail": "PayPal is not configured."},
+                {"detail": "PayPal is not configured. Please contact support."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
@@ -295,7 +233,6 @@ class PayPalConfigView(APIView):
             "currency": settings.PAYPAL_CURRENCY,
             "premiumPrice": settings.PAYPAL_PREMIUM_PRICE,
             "mode": settings.PAYPAL_MODE.lower(),
-            "mockMode": is_mock_mode,
         })
 
 

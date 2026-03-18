@@ -8,11 +8,6 @@ try {
   storedAuth = null;
 }
 
-if (storedAuth?.token?.startsWith("mock-jwt-token-")) {
-  localStorage.removeItem("tunequest-auth");
-  storedAuth = null;
-}
-
 const initialState = {
   token: storedAuth?.token || null,
   user: storedAuth?.user || null,
