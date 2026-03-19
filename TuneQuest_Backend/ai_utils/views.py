@@ -121,8 +121,8 @@ def _create_learning_cards_from_plan(plan: dict, skill_level: str, instrument: s
     Generate and create AI-learning cards for this specific user based on the practice plan.
     
     CARDS MATCH PLAN CATEGORIES:
-    - FREE TIER: Max 5 cards (max 1 per category from plan)
-    - PREMIUM TIER: Max 10 cards (max 3 per category from plan)
+    - FREE TIER: Max 3 cards (max 1 per category from plan)
+    - PREMIUM TIER: Max 6 cards (max 3 per category from plan)
     
     CRITICAL: Deletes user's old AI-generated lessons first, then creates new ones.
     This ensures lessons don't accumulate across plan regenerations.
@@ -149,116 +149,65 @@ def _create_learning_cards_from_plan(plan: dict, skill_level: str, instrument: s
     
     is_premium = subscription and subscription.is_active if subscription else False
     max_cards = 10 if is_premium else 5
-    max_per_category = 3 if is_premium else 1
-    print(f"[CARD GEN] User {user.id} is {'PREMIUM' if is_premium else 'FREE'} - Max {max_cards} cards (max {max_per_category} per category)")
+    print(f"[CARD GEN] User {user.id} is {'PREMIUM' if is_premium else 'FREE'} - Max {max_cards} cards")
     
-    # Get the categories from the practice plan
-    plan_categories = set()
-    for step in plan.get('steps', []):
-        cat = step.get('category', '').strip()
-        if cat:
-            plan_categories.add(cat)
-    print(f"[CARD GEN] Plan categories: {plan_categories}")
-    
+    # Created lessons will be based on the practice plan steps
     created_slugs = []
     step_count = 0
-    category_counts = {cat: 0 for cat in plan_categories}  # Track cards per category
-    used_topics = set()  # Track topics we've used to avoid duplicates
     
-    # Define learning objectives per category
-    category_topics = {
-        'Technique': [
-            'Basic Finger Placement', 'String Muting Techniques', 'Barre Chord Fundamentals',
-            'Fingerpicking Patterns', 'Palm Muting Techniques', 'Harmonic Techniques',
-            'Sweep Picking Intro', 'Vibrato and Expression', 'Dynamic Control', 'Alternate Picking Speed'
-        ],
-        'Rhythm': [
-            'Basic Time Signatures', 'Strumming Patterns', 'Eighth Note Grooves',
-            'Sixteenth Note Rhythms', 'Syncopation', 'Polyrhythms Intro', 'Triplet Feels',
-            'Swing Rhythms', 'Odd Time Signatures', 'Rhythm Handwriting'
-        ],
-        'Knowledge': [
-            'Major and Minor Scales', 'Chord Construction Basics', 'Intervals and Harmony',
-            'Music Theory Fundamentals', 'Key Signatures', 'Voice Leading Basics',
-            'Chord Progressions', 'Mode Theory Intro', 'Harmonic Function', 'Enharmonic Equivalents'
-        ],
-        'Repertoire': [
-            'Learning Simple Songs', 'Popular Rock Songs', 'Classic Standards',
-            'Acoustic Fingerstyle Songs', 'Blues Progressions', 'Jazz Standards Intro',
-            'Contemporary Hits', 'Classic Rock Riffs', 'Folk Song Adaptations', 'Song Analysis'
-        ],
-        'Ear Training': [
-            'Interval Recognition', 'Chord Quality Identification', 'Melodic Dictation',
-            'Rhythmic Dictation', 'Scale Identification', 'Perfect Pitch Training',
-            'Relative Pitch Development', 'Harmonic Ear Training', 'Note Recognition by Sound', 'Chord Progression Ear'
-        ],
-        'Quizzes': [
-            'Music Theory Quiz', 'Scale Recognition Quiz', 'Chord Identification Quiz',
-            'Interval Ear Training', 'Rhythm Recognition', 'Music History Quiz'
-        ]
-    }
-    
-    # Helper function to create a lesson
-    def create_lesson_from_topic(topic, category):
+    # Helper function to create a lesson from a plan step
+    def create_lesson_from_step(plan_step):
         nonlocal step_count
         if step_count >= max_cards:
             return None
         
-        # Check category limit
-        if category_counts.get(category, 0) >= max_per_category:
-            return None
-        
-        # Ensure we don't duplicate topics
-        if topic in used_topics:
-            return None
-        
         difficulty = skill_level if skill_level in ['Beginner', 'Intermediate', 'Advanced'] else 'Beginner'
         unique_id = str(uuid.uuid4())[:8]
-        slug = f"ai-{category.lower().replace(' ', '-')}-{step_count}-{unique_id}"[:20]
+        slug = f"ai-{step_count}-{unique_id}"[:20]
+        
+        step_title = plan_step.get('title', 'Practice Step')
+        step_category = plan_step.get('category', 'Music Theory')
+        step_description = plan_step.get('description', f'Practice {step_title.lower()} for {instrument}.')
+        
+        # Map practice plan category to lesson category
+        lesson_category = _map_category_to_lesson_category(step_category)
         
         content = [
-            {'type': 'text', 'heading': 'Overview', 'body': f'Master {topic.lower()} for {instrument}. This AI-generated lesson provides structured learning and practice guidance.'},
-            {'type': 'text', 'heading': 'What You\'ll Learn', 'body': f'In this lesson, you will:\n• Understand the core concepts of {topic.lower()}\n• Develop practical skills through guided exercises\n• Apply these concepts to real musical situations\n• Build confidence and proficiency step by step'},
-            {'type': 'tip', 'body': f'🎯 Focus Area: This lesson emphasizes {topic.lower()} which is essential for {instrument} players at the {difficulty} level.'},
+            {'type': 'text', 'heading': 'Overview', 'body': f'Master {step_title.lower()} for {instrument}. This AI-generated lesson provides structured learning and practice guidance.'},
+            {'type': 'text', 'heading': 'What You\'ll Learn', 'body': f'In this lesson, you will:\n• Understand the core concepts of {step_title.lower()}\n• Develop practical skills through guided exercises\n• Apply these concepts to real musical situations\n• Build confidence and proficiency step by step'},
+            {'type': 'tip', 'body': f'🎯 Focus Area: This lesson emphasizes {step_title.lower()} which is essential for {instrument} players at the {difficulty} level.'},
             {'type': 'text', 'heading': 'Practice Tips', 'body': 'Break the lesson into small, manageable sections\nPractice each section until comfortable\nCombine sections into a complete practice routine\nReview regularly to reinforce learning'}
         ]
         
         try:
             lesson = Lesson.objects.create(
                 slug=slug,
-                title=topic,
-                category=_map_category_to_lesson_category(category),
+                title=step_title,
+                category=lesson_category,
                 difficulty=difficulty,
                 duration_minutes=20,
-                description=f'An AI-generated lesson on {topic.lower()}',
+                description=step_description,
                 content=content,
                 order=step_count,
                 user=user
             )
             created_slugs.append(lesson.slug)
-            used_topics.add(topic)
             step_count += 1
-            category_counts[category] = category_counts.get(category, 0) + 1
-            print(f"[CARD GEN] Created card {step_count}/{max_cards}: {topic} in {category}")
+            print(f"[CARD GEN] Created card {step_count}/{max_cards}: {step_title} from plan step")
             return lesson
         except Exception as e:
-            print(f"Error creating lesson {slug}: {e}")
+            print(f"Error creating lesson from step {step_title}: {e}")
             return None
     
-    # Fill cards from plan categories first
-    for category in plan_categories:
-        if category not in category_topics:
-            print(f"[CARD GEN] Skipping unknown category: {category}")
-            continue
-        
-        # Add up to max_per_category cards from this category
-        for topic in category_topics[category]:
-            if step_count >= max_cards or category_counts[category] >= max_per_category:
-                break
-            create_lesson_from_topic(topic, category)
+    # Create lessons from the practice plan steps
+    plan_steps = plan.get('steps', [])
+    for plan_step in plan_steps:
+        if step_count >= max_cards:
+            break
+        create_lesson_from_step(plan_step)
     
     print(f"[CARD GEN] Created {step_count} total cards for user {user.id} ({max_cards} max)")
-    print(f"[CARD GEN] Categories breakdown: {category_counts}")
+    print(f"[CARD GEN] Generated from {len(plan_steps)} practice plan steps")
     return created_slugs
 
 
