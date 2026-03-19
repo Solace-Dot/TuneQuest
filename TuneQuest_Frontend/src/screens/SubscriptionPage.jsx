@@ -65,6 +65,7 @@ function SubscriptionPage() {
   const dispatch = useDispatch();
   const { subscription, token } = useSelector((state) => state.auth);
   const [paypalConfig, setPayPalConfig] = useState(null);
+  const [isConfigLoading, setIsConfigLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState("");
 
@@ -83,13 +84,20 @@ function SubscriptionPage() {
   useEffect(() => {
     async function loadConfig() {
       if (!token) {
+        setPayPalConfig(null);
+        setPaymentError("");
+        setIsConfigLoading(false);
         return;
       }
+
+      setIsConfigLoading(true);
+      setPaymentError("");
 
       try {
         const config = await fetchPayPalConfig();
         setPayPalConfig(config);
       } catch (err) {
+        setPayPalConfig(null);
         const isNetworkError = !err?.response;
         setPaymentError(
           err?.response?.data?.detail ||
@@ -97,6 +105,8 @@ function SubscriptionPage() {
               ? `Cannot reach backend API at ${API_BASE_URL}.`
               : "Unable to load PayPal checkout right now."),
         );
+      } finally {
+        setIsConfigLoading(false);
       }
     }
 
@@ -201,9 +211,17 @@ function SubscriptionPage() {
                     <button className="btn btn-outline" disabled>
                       Login to Upgrade
                     </button>
-                  ) : !paypalOptions ? (
+                  ) : isConfigLoading ? (
                     <button className="btn btn-outline" disabled>
                       Loading Checkout...
+                    </button>
+                  ) : paymentError && !paypalOptions ? (
+                    <button className="btn btn-outline" disabled>
+                      Checkout Unavailable
+                    </button>
+                  ) : !paypalOptions ? (
+                    <button className="btn btn-outline" disabled>
+                      PayPal Unavailable
                     </button>
                   ) : paypalConfig?.mockMode ? (
                     <button className="btn btn-primary" onClick={handleMockCheckout}>
