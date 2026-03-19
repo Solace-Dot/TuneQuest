@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: tunequest-backend
+    env: python
+    rootDir: TuneQuest_Backend
+    buildCommand: pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --no-input
+    startCommand: gunicorn config.wsgi:application --log-file -
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: "tunequest-backend.onrender.com"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://your-frontend-project.vercel.app"
+      - key: CSRF_TRUSTED_ORIGINS
+        value: "https://your-frontend-project.vercel.app"
+      - key: USE_POSTGRES
+        value: "false"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tunequest-db
+          property: connectionString
+
+databases:
+  - name: tunequest-db
+    databaseName: tunequest
+    user: tunequest

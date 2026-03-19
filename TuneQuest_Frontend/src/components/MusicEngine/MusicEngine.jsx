@@ -40,6 +40,8 @@ const MusicalGame = () => {
   const gameContainerRef   = useRef(null);
   const appRef             = useRef(null);
   const audioContextRef    = useRef(null);    // mic/detection only
+  const micStreamRef       = useRef(null);
+  const monitorGainRef     = useRef(null);
   const playbackContextRef = useRef(null);    // soundfont playback — kept clean from mic
   const intervalRef        = useRef(null);
   const requestRef         = useRef(null);
@@ -57,6 +59,22 @@ const MusicalGame = () => {
 
   // Metronome (BPM drives canvas scroll speed)
   const metronome = useMetronome(80);
+
+  const getMicStream = async () => {
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      });
+    } catch (_rawErr) {
+      // Fallback to broad defaults for devices that reject strict constraints.
+      return navigator.mediaDevices.getUserMedia({ audio: true });
+    }
+  };
 
   const [score, setScore]                   = useState(0);
   const [currentNote, setCurrentNote]       = useState('-');
@@ -157,9 +175,8 @@ const MusicalGame = () => {
       guitarSamplerRef.current = guitar;
     }).catch(() => {});
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, highpassFilter: false },
-    });
+    const stream = await getMicStream();
+    micStreamRef.current = stream;
     const source   = audioContext.createMediaStreamSource(stream);
     const gainNode = audioContext.createGain();
     gainNode.gain.value = gainLevel;
@@ -168,6 +185,14 @@ const MusicalGame = () => {
     analyser.fftSize = fftSize;
     source.connect(gainNode);
     gainNode.connect(analyser);
+
+    // Keep analyser processing active without adding audible monitoring.
+    const monitorGain = audioContext.createGain();
+    monitorGain.gain.value = 0;
+    analyser.connect(monitorGain);
+    monitorGain.connect(audioContext.destination);
+
+    monitorGainRef.current = monitorGain;
     analyserRef.current = analyser;
 
     return { audioContext, analyser };
@@ -507,8 +532,21 @@ const MusicalGame = () => {
     try { appRef.current?.destroy(true, { children: true, texture: true, baseTexture: true }); } catch (e) {}
     clearInterval(intervalRef.current);
     cancelAnimationFrame(requestRef.current);
+
+    if (monitorGainRef.current) {
+      try { monitorGainRef.current.disconnect(); } catch (_e) {}
+      monitorGainRef.current = null;
+    }
+
+    if (micStreamRef.current) {
+      try { micStreamRef.current.getTracks().forEach((track) => track.stop()); } catch (_e) {}
+      micStreamRef.current = null;
+    }
+
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') audioContextRef.current.close();
     audioContextRef.current = null;
+    analyserRef.current = null;
+    gameGainNodeRef.current = null;
     if (playbackContextRef.current && playbackContextRef.current.state !== 'closed') playbackContextRef.current.close();
     playbackContextRef.current = null;
   };
@@ -519,7 +557,17 @@ const MusicalGame = () => {
     }
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    if (monitorGainRef.current) {
+      try { monitorGainRef.current.disconnect(); } catch (_e) {}
+      monitorGainRef.current = null;
+    }
+    if (micStreamRef.current) {
+      try { micStreamRef.current.getTracks().forEach((track) => track.stop()); } catch (_e) {}
+      micStreamRef.current = null;
+    }
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') audioContextRef.current.close();
+    analyserRef.current = null;
+    gameGainNodeRef.current = null;
     if (playbackContextRef.current && playbackContextRef.current.state !== 'closed') playbackContextRef.current.close();
   }, []);
 

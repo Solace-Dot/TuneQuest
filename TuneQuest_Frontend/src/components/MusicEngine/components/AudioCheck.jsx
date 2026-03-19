@@ -25,13 +25,17 @@ const AudioCheck = ({ onPass }) => {
   const chordIntervalRef    = useRef(null);
   // Local audio graph just for AudioCheck
   const audioCtxRef         = useRef(null);
+  const micStreamRef        = useRef(null);
   const gainNodeRef         = useRef(null);
   const analyserCheckRef    = useRef(null);
+  const monitorGainRef      = useRef(null);
 
 
 
   const waveformContainerRef = useRef(null); // used by MetronomeBar for border-pulse
   const watchdogRef         = useRef(null); // watchdog timeout for draw loop startup
+  const calibrationTimerRef = useRef(null);
+  const rafFallbackRef      = useRef(null);
 
   const [status, setStatus]             = useState('idle');
   const [volume, setVolume]             = useState(0);
@@ -49,20 +53,33 @@ const AudioCheck = ({ onPass }) => {
 
   const metronome = useMetronome(80);
 
+  const getMicStream = useCallback(async () => {
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      });
+    } catch (_rawErr) {
+      // Fallback: broad browser-default constraints for maximum compatibility.
+      return navigator.mediaDevices.getUserMedia({ audio: true });
+    }
+  }, []);
+
   // Local helper: create mic AudioContext + analyser for AudioCheck
   const setupAudio = useCallback(async (fftSize = 4096) => {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     if (audioContext.state === 'suspended') await audioContext.resume();
     audioCtxRef.current = audioContext;
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, highpassFilter: false },
+    const stream = await getMicStream();
+    micStreamRef.current = stream;
+    stream.getAudioTracks().forEach((track) => {
+      track.enabled = true;
     });
-    console.log('[AudioCheck] stream tracks:', stream.getAudioTracks().map(t => ({
-      label: t.label,
-      enabled: t.enabled,
-      readyState: t.readyState,
-    })));
 
     const source   = audioContext.createMediaStreamSource(stream);
 
@@ -73,15 +90,31 @@ const AudioCheck = ({ onPass }) => {
     analyser.fftSize = fftSize;
     source.connect(gainNode);
     gainNode.connect(analyser);
+
+    // Keep the graph actively processed without audible output.
+    const monitorGain = audioContext.createGain();
+    monitorGain.gain.value = 0;
+    analyser.connect(monitorGain);
+    monitorGain.connect(audioContext.destination);
+
+    monitorGainRef.current = monitorGain;
     analyserCheckRef.current = analyser;
 
     return { audioContext, analyser };
-  }, [gainLevel]);
+  }, [gainLevel, getMicStream]);
 
   const cleanup = useCallback(() => {
 
     metronome.stop();
     if (watchdogRef.current) clearTimeout(watchdogRef.current);
+    if (calibrationTimerRef.current) {
+      clearTimeout(calibrationTimerRef.current);
+      calibrationTimerRef.current = null;
+    }
+    if (rafFallbackRef.current) {
+      clearTimeout(rafFallbackRef.current);
+      rafFallbackRef.current = null;
+    }
     if (animRef.current) {
       cancelAnimationFrame(animRef.current);
       clearInterval(animRef.current); // also clear if it's an interval ID
@@ -90,15 +123,30 @@ const AudioCheck = ({ onPass }) => {
       clearInterval(chordIntervalRef.current);
       chordIntervalRef.current = null;
     }
+
+    if (monitorGainRef.current) {
+      try { monitorGainRef.current.disconnect(); } catch (_e) {}
+      monitorGainRef.current = null;
+    }
+
+    if (micStreamRef.current) {
+      try {
+        micStreamRef.current.getTracks().forEach((track) => track.stop());
+      } catch (_e) {}
+      micStreamRef.current = null;
+    }
+
+    analyserCheckRef.current = null;
+    gainNodeRef.current = null;
+
     // Close local AudioCheck audio context if present
     if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
       try { audioCtxRef.current.close(); } catch (_e) {}
       audioCtxRef.current = null;
     }
-  }, [metronome]);
+  }, []);
 
   const startCheck = useCallback(async () => {
-    console.log('[AudioCheck] startCheck called');
     setStatus('requesting');
     setTestStep(0);
     setCalibrating(false);
@@ -117,6 +165,7 @@ const AudioCheck = ({ onPass }) => {
 
       const detect = makeDetectors(audioCtx.sampleRate);
       const buffer = new Float32Array(analyser.fftSize);
+      const byteBuffer = new Uint8Array(analyser.fftSize);
 
 
 
@@ -154,6 +203,12 @@ const AudioCheck = ({ onPass }) => {
       const CALIBRATION_TIMEOUT_MS = 2000; // Force calibration completion after 2 seconds
       let zeroAudioFrameCount = 0; // count frames with no audio signal
 
+      // Never let calibration block forever, even when the selected input is silent.
+      calibrationTimerRef.current = setTimeout(() => {
+        calibrated = true;
+        setCalibrating(false);
+      }, CALIBRATION_TIMEOUT_MS + 500);
+
       const draw = () => {
         try {
           if (drawFrame === 0) {
@@ -172,23 +227,21 @@ const AudioCheck = ({ onPass }) => {
           }
 
           analyserNode.getFloatTimeDomainData(buffer);
-
-          // TEMP: log a few samples with precision to confirm input
-          if (drawFrame % 30 === 0) {
-            console.log(
-              '[AudioCheck] frame', drawFrame,
-              'buffer[0..3]=',
-              buffer[0]?.toFixed(6),
-              buffer[1]?.toFixed(6),
-              buffer[2]?.toFixed(6),
-              buffer[3]?.toFixed(6),
-            );
-          }
+          analyserNode.getByteTimeDomainData(byteBuffer);
 
           // Check if we're getting actual audio
           let bufferMax = 0;
           for (let i = 0; i < buffer.length; i++) {
             bufferMax = Math.max(bufferMax, Math.abs(buffer[i]));
+          }
+
+          // Byte-domain fallback helps on devices where float time-domain stays near zero.
+          let byteMaxDeviation = 0;
+          for (let i = 0; i < byteBuffer.length; i++) {
+            const deviation = Math.abs(byteBuffer[i] - 128) / 128;
+            if (deviation > byteMaxDeviation) {
+              byteMaxDeviation = deviation;
+            }
           }
           if (bufferMax === 0) {
             zeroAudioFrameCount++;
@@ -200,7 +253,9 @@ const AudioCheck = ({ onPass }) => {
         let rms = 0;
         for (let i = 0; i < buffer.length; i++) rms += buffer[i] * buffer[i];
         rms = Math.sqrt(rms / buffer.length);
-        const vol = Math.min(100, Math.round(rms * 500));
+        const floatVolume = rms * 1200;
+        const byteVolume = byteMaxDeviation * 220;
+        const vol = Math.min(100, Math.round(Math.max(floatVolume, byteVolume)));
         
         // Throttle volume updates to avoid excessive re-renders (max 20 updates/sec)
         const nowTime = performance.now();
@@ -222,7 +277,7 @@ const AudioCheck = ({ onPass }) => {
           const elapsed = performance.now() - calibrationStartTime;
           const HAS_SIGNAL_FRAMES_REQUIRED = 3;
 
-          if (bufferMax > 0) {
+          if (bufferMax > 0.0005 || byteMaxDeviation > 0.01) {
             signalFrames += 1;
           }
 
@@ -345,9 +400,7 @@ const AudioCheck = ({ onPass }) => {
         ctx.shadowBlur = 0;
         
         animRef.current = requestAnimationFrame(draw);
-        } catch (err) {
-          // Log so we can see if something inside draw is throwing
-          console.error('AudioCheck draw error:', err);
+        } catch (_err) {
           // Force calibration to complete on error so user can proceed
           if (!calibrated) {
             setCalibrating(false);
@@ -367,9 +420,10 @@ const AudioCheck = ({ onPass }) => {
       }, 500);
       
       // Additional safety: if stuck after a couple frames, switch to setInterval fallback
-      let rafFallbackTimeout = setTimeout(() => {
+      rafFallbackRef.current = setTimeout(() => {
         if (drawFrame > 0 && drawFrame < 5) {
-          clearTimeout(rafFallbackTimeout);
+          clearTimeout(rafFallbackRef.current);
+          rafFallbackRef.current = null;
           // Switch to setInterval for emergency backup
           const intervalId = setInterval(() => {
             try {
@@ -384,7 +438,7 @@ const AudioCheck = ({ onPass }) => {
     } catch (_err) {
       setStatus('error');
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- intentional closure for continuous audio processing
+  }, [cleanup, gainLevel, setupAudio]);
 
   const handleContinue    = () => { cleanup(); onPass(gainLevel); };
   const handleGainChange  = (val) => {
@@ -392,7 +446,7 @@ const AudioCheck = ({ onPass }) => {
     if (gainNodeRef.current) gainNodeRef.current.gain.value = val;
   };
 
-  useEffect(() => () => cleanup(), [cleanup]);
+  useEffect(() => () => cleanup(), []);
 
   const volPct   = Math.min(100, volume);
   const volColor = volume < 10 ? 'rgba(255,255,255,0.15)' : volume < 30 ? '#facc15' : '#5fe0c0';
