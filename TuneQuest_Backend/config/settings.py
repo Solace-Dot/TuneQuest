@@ -95,10 +95,15 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip().strip('"').strip("'")
 USE_POSTGRES = os.getenv("USE_POSTGRES", "false").lower() == "true"
+HAS_VALID_DATABASE_URL = (
+    bool(DATABASE_URL)
+    and "replace-with" not in DATABASE_URL.lower()
+    and "://" in DATABASE_URL
+)
 
-if DATABASE_URL:
+if HAS_VALID_DATABASE_URL:
     DATABASES = {
         "default": dj_database_url.parse(
             DATABASE_URL,
