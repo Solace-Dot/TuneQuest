@@ -6,6 +6,7 @@ import { getFFTPeaks, detectChord } from '../utils/chordDetection';
 import useMetronome from '../../../hooks/useMetronome';
 import MetronomeBar from './MetronomeBar';
 
+
 // ─── Test sequence run at startup ────────────────────────────────────────────
 const TESTS = [
   { type: 'note',  label: 'Pluck your 1st string',  hint: 'High E  (e)',  string: 1 },
@@ -16,15 +17,19 @@ const TESTS = [
 ];
 
 // ─── AudioCheck ────────────────────────────────────────────────────────────────
-// Pre-flight screen: tests microphone signal, pitch detection, and chord detection
+ // Pre-flight screen: tests microphone signal, pitch detection, and chord detection
 // before letting the user enter the game. onPass(gainLevel) is called on success.
 const AudioCheck = ({ onPass }) => {
   const canvasRef           = useRef(null);
   const animRef             = useRef(null);
+  const chordIntervalRef    = useRef(null);
+  // Local audio graph just for AudioCheck
   const audioCtxRef         = useRef(null);
-  const streamRef           = useRef(null);
   const gainNodeRef         = useRef(null);
   const analyserCheckRef    = useRef(null);
+
+
+
   const waveformContainerRef = useRef(null); // used by MetronomeBar for border-pulse
   const watchdogRef         = useRef(null); // watchdog timeout for draw loop startup
 
@@ -35,6 +40,7 @@ const AudioCheck = ({ onPass }) => {
   // eslint-disable-next-line no-unused-vars
   const [signalOk, setSignalOk]         = useState(false);
   const [gainLevel, setGainLevel]       = useState(2);
+  const gainUpdateTimeoutRef            = useRef(null);
   const [liveChord, setLiveChord]       = useState(null);
   // eslint-disable-next-line no-unused-vars
   const [chordConfidence, setChordConfidence] = useState(0);
@@ -43,47 +49,77 @@ const AudioCheck = ({ onPass }) => {
 
   const metronome = useMetronome(80);
 
+  // Local helper: create mic AudioContext + analyser for AudioCheck
+  const setupAudio = useCallback(async (fftSize = 4096) => {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') await audioContext.resume();
+    audioCtxRef.current = audioContext;
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, highpassFilter: false },
+    });
+    console.log('[AudioCheck] stream tracks:', stream.getAudioTracks().map(t => ({
+      label: t.label,
+      enabled: t.enabled,
+      readyState: t.readyState,
+    })));
+
+    const source   = audioContext.createMediaStreamSource(stream);
+
+    const gainNode = audioContext.createGain();
+    gainNode.gain.value = gainLevel;
+    gainNodeRef.current = gainNode;
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = fftSize;
+    source.connect(gainNode);
+    gainNode.connect(analyser);
+    analyserCheckRef.current = analyser;
+
+    return { audioContext, analyser };
+  }, [gainLevel]);
+
   const cleanup = useCallback(() => {
+
     metronome.stop();
     if (watchdogRef.current) clearTimeout(watchdogRef.current);
     if (animRef.current) {
       cancelAnimationFrame(animRef.current);
       clearInterval(animRef.current); // also clear if it's an interval ID
     }
-    if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
-    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
+    if (chordIntervalRef.current) {
+      clearInterval(chordIntervalRef.current);
+      chordIntervalRef.current = null;
+    }
+    // Close local AudioCheck audio context if present
+    if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+      try { audioCtxRef.current.close(); } catch (_e) {}
+      audioCtxRef.current = null;
+    }
   }, [metronome]);
 
   const startCheck = useCallback(async () => {
+    console.log('[AudioCheck] startCheck called');
     setStatus('requesting');
     setTestStep(0);
     setCalibrating(false);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      });
-      streamRef.current = stream;
+      // Fresh local audio graph for AudioCheck (user gesture)
+      let { audioContext: audioCtx, analyser } = await setupAudio(4096);
 
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === 'suspended') {
         await audioCtx.resume();
       }
-      audioCtxRef.current = audioCtx;
 
-      const source   = audioCtx.createMediaStreamSource(stream);
-      const gainNode = audioCtx.createGain();
-      gainNode.gain.value = gainLevel;
-      gainNodeRef.current = gainNode;
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 4096; // Match play notes mode
-      source.connect(gainNode);
-      gainNode.connect(analyser);
-      // DO NOT connect to destination - just let the analyser tap into the signal
-      // This matches how the play modes (notes/chords) do it
-      analyserCheckRef.current = analyser;
+      // Ensure gain node matches our slider (already set in setupAudio)
+      if (gainNodeRef.current) {
+        gainNodeRef.current.gain.value = gainLevel;
+      }
 
       const detect = makeDetectors(audioCtx.sampleRate);
       const buffer = new Float32Array(analyser.fftSize);
+
+
+
       const canvas = canvasRef.current;
       if (!canvas) {
         setStatus('error');
@@ -94,17 +130,18 @@ const AudioCheck = ({ onPass }) => {
         setStatus('error');
         return;
       }
-      const METRO_GATE_MS = 120;
+      // No metronome gating in AudioCheck; detection runs continuously
 
       setStatus('active');
       let signalFrames     = 0;
       let lastValidPitch   = null;
       let lastValidPositions = [];
       let lastValidTime    = 0;
-      let lastValidChord   = null;
+      let lastValidChord     = null;
       let lastValidChordTime = 0;
-      let drawFrame        = 0;
-      let lastVolUpdateTime = 0; // throttle volume updates
+      let drawFrame          = 0;
+      let lastVolUpdateTime  = 0; // throttle volume updates
+      let chordFrameCounter  = 0; // throttle chord detection (every 4th frame)
       const PITCH_HOLD_MS = 150;  // short hold — don't ghost notes after signal drops
       const CHORD_HOLD_MS = 600;  // hold chord display longer to smooth over missed frames
       const VOL_UPDATE_MS = 50; // only update UI every 50ms to avoid excessive renders
@@ -129,12 +166,25 @@ const AudioCheck = ({ onPass }) => {
           drawFrame++;
           
           // CRITICAL: Check if analyser still exists (React might have unmounted it)
-          if (!analyserCheckRef.current) {
+          const analyserNode = analyserCheckRef.current;
+          if (!analyserNode) {
             return;
           }
-          
-          analyser.getFloatTimeDomainData(buffer);
-          
+
+          analyserNode.getFloatTimeDomainData(buffer);
+
+          // TEMP: log a few samples with precision to confirm input
+          if (drawFrame % 30 === 0) {
+            console.log(
+              '[AudioCheck] frame', drawFrame,
+              'buffer[0..3]=',
+              buffer[0]?.toFixed(6),
+              buffer[1]?.toFixed(6),
+              buffer[2]?.toFixed(6),
+              buffer[3]?.toFixed(6),
+            );
+          }
+
           // Check if we're getting actual audio
           let bufferMax = 0;
           for (let i = 0; i < buffer.length; i++) {
@@ -160,23 +210,105 @@ const AudioCheck = ({ onPass }) => {
         }
 
         const raw      = detect(buffer);
-        // Skip pitch & chord detection immediately after a metronome click
-        const gated = metronome.isPlaying &&
-          (performance.now() - metronome.lastTickRef.current) < METRO_GATE_MS;
-        const detected = gated ? null : correctOctave(raw);
+        const detected = correctOctave(raw);
         const now      = performance.now();
 
-        // SKIP all the complex pitch/chord detection during calibration
-        // Just auto-complete calibration after 1 frame
+        // Calibration: cosmetic only; don't block detection
         if (!calibrated) {
-          if (drawFrame === 1) setCalibrating(true);
-          calibrated = true;
-          setCalibrating(false);
+          if (drawFrame === 1) {
+            setCalibrating(true);
+          }
+
+          const elapsed = performance.now() - calibrationStartTime;
+          const HAS_SIGNAL_FRAMES_REQUIRED = 3;
+
+          if (bufferMax > 0) {
+            signalFrames += 1;
+          }
+
+          if (signalFrames >= HAS_SIGNAL_FRAMES_REQUIRED || elapsed > CALIBRATION_TIMEOUT_MS) {
+            calibrated = true;
+            setCalibrating(false);
+          }
         }
 
-        // Skip test sequence advancement - let user manually click to proceed
-        let freshPositions = [];
-        let passed = false;
+        // Detection logic runs regardless; calibration only affects the UI
+        if (true) {
+          // PITCH / NOTE DETECTION — mirror Notes mode
+          const pitchHz = detected; // correctOctave(raw) returns a number in Hz
+          if (pitchHz && pitchHz > 70 && pitchHz < 2000) {
+            lastValidPitch      = pitchHz;
+            lastValidTime       = now;
+            const positions     = getAllNotePositions(pitchHz);
+            lastValidPositions  = positions;
+
+            setPitch(Math.round(pitchHz));
+            setNoteInfo(positions);
+          } else if (now - lastValidTime > PITCH_HOLD_MS) {
+            lastValidPitch      = null;
+            lastValidPositions  = [];
+            setPitch(null);
+            setNoteInfo(null);
+          }
+
+          // CHORD DETECTION (FFT based)
+          const currentTest = TESTS[currentTestStep];
+
+          if (currentTest && currentTest.type === 'chord') {
+            // Only run chord detection during chord tests, and throttle to every 4th frame
+            chordFrameCounter = (chordFrameCounter + 1) % 4;
+            if (chordFrameCounter === 0) {
+              const audioCtx = audioCtxRef.current;
+              if (!audioCtx) {
+                animRef.current = requestAnimationFrame(draw);
+                return;
+              }
+              const peaks       = getFFTPeaks(analyserNode, audioCtx.sampleRate);
+              const chordResult = detectChord(peaks);
+
+              if (chordResult && chordResult.score >= 2.5) {
+                const chordName = `${chordResult.root}${chordResult.suffix || ''}`;
+                lastValidChord      = chordName;
+                lastValidChordTime  = now;
+                setLiveChord(chordName);
+                setChordConfidence(chordResult.score);
+              }
+            }
+          }
+
+          if (now - lastValidChordTime > CHORD_HOLD_MS) {
+            lastValidChord = null;
+            setLiveChord(null);
+            setChordConfidence(0);
+          }
+
+          // TEST ADVANCEMENT
+          let passed = false;
+
+          if (currentTest) {
+            if (currentTest.type === 'note' && lastValidPositions.length > 0) {
+              // Pass if any detected position matches requested string
+              if (lastValidPositions.some(p => p.stringNum === currentTest.string)) {
+                passed = true;
+              }
+            }
+
+            if (currentTest.type === 'chord' && lastValidChord) {
+              if (lastValidChord === currentTest.chord) {
+                passed = true;
+              }
+            }
+
+            if (passed) {
+              // avoid rapid multi-advances
+              if (!testAdvanceAt || now - testAdvanceAt > 600) {
+                testAdvanceAt = now;
+                currentTestStep += 1;
+                setTestStep(currentTestStep);
+              }
+            }
+          }
+        }
 
         // Draw waveform
         const W = canvas.width, H = canvas.height;
@@ -195,11 +327,11 @@ const AudioCheck = ({ onPass }) => {
         grad.addColorStop(0.5, '#9f86ff');
         grad.addColorStop(1,   '#5fe0c0');
         ctx.strokeStyle = grad;
-        ctx.lineWidth   = 2;
+        ctx.lineWidth   = 1.5;
         ctx.shadowColor = '#815cf9';
-        ctx.shadowBlur  = vol > 8 ? 10 : 2;
+        ctx.shadowBlur  = vol > 8 ? 6 : 1;
         ctx.beginPath();
-        const DRAW_POINTS = 256;
+        const DRAW_POINTS = 128; // fewer points → less canvas work
         const step  = Math.ceil(buffer.length / DRAW_POINTS);
         const slice = W / DRAW_POINTS;
         let x = 0, pt = 0;
@@ -214,6 +346,8 @@ const AudioCheck = ({ onPass }) => {
         
         animRef.current = requestAnimationFrame(draw);
         } catch (err) {
+          // Log so we can see if something inside draw is throwing
+          console.error('AudioCheck draw error:', err);
           // Force calibration to complete on error so user can proceed
           if (!calibrated) {
             setCalibrating(false);

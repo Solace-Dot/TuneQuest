@@ -525,7 +525,16 @@ const MusicalGame = () => {
 
   // ─── Screen: AudioCheck ────────────────────────────────────────────────────────
   if (screen === 'check') {
-    return <AudioCheck onPass={(g) => { setGainLevel(g); setScreen('start'); }} />;
+    // Do NOT call setupAudio here (no user gesture). AudioCheck will rely on the
+    // graph created when the user starts a game, or we can show a message if missing.
+    return (
+      <AudioCheck
+        onPass={(g) => { setGainLevel(g); setScreen('start'); }}
+        audioContextRef={audioContextRef}
+        analyserRef={analyserRef}
+        gameGainNodeRef={gameGainNodeRef}
+      />
+    );
   }
 
   // ─── Screen: Start / Mode Select ──────────────────────────────────────────────
