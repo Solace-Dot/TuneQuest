@@ -266,10 +266,10 @@ def test_multiple_purchases():
     print(f"  ✓ Subscription count: {subscription_count_2}")
     
     if subscription_count_2 != 2:
-        print(f"  ✗ ERROR: Expected 2 subscriptions, got {subscription_count_2}")
-        print(f"    (Each purchase should create new subscription)")
+        print("  ✗ ERROR: Expected 2 subscriptions, got {subscription_count_2}")
+        print("    (Each purchase should create new subscription)")
         return False
-    print(f"  ✓ Each purchase creates new subscription record")
+    print("  ✓ Each purchase creates new subscription record")
     
     # Verify most recent subscription is fetched
     print(f"\n→ Verifying most recent subscription is fetched:")

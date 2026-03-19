@@ -214,7 +214,7 @@ def _create_learning_cards_from_plan(plan: dict, skill_level: str, instrument: s
         
         difficulty = skill_level if skill_level in ['Beginner', 'Intermediate', 'Advanced'] else 'Beginner'
         unique_id = str(uuid.uuid4())[:8]
-        slug = f"ai-{category.lower().replace(' ', '-')}-{step_count}-{unique_id}"[:25]
+        slug = f"ai-{category.lower().replace(' ', '-')}-{step_count}-{unique_id}"[:20]
         
         content = [
             {'type': 'text', 'heading': 'Overview', 'body': f'Master {topic.lower()} for {instrument}. This AI-generated lesson provides structured learning and practice guidance.'},
